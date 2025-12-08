@@ -1,6 +1,8 @@
 import abc
-from typing import Dict, Optional, Tuple, Type, Union, Any, Literal, List, Callable
+from typing import Dict, Optional, Tuple, Type, Union, Any, Literal, List
 import scipy
+
+from unittest import result
 import warnings
 import anndata as ad  # type: ignore
 import numpy as np
@@ -75,14 +77,12 @@ class BasePipeline(abc.ABC):
         data: Optional[
             Union[DataPackage, DatasetContainer, ad.AnnData, MuData, pd.DataFrame, dict]  # type: ignore[invalid-type-form]
         ],
-        visualizer: Optional[Type[BaseVisualizer]] = None,
-        evaluator: Optional[Type[BaseEvaluator]] = None,
+        visualizer: Optional[BaseVisualizer] = None,
+        evaluator: Optional[BaseEvaluator] = None,
         result: Optional[Result] = None,
         config: Optional[DefaultConfig] = None,
         custom_split: Optional[Dict[str, np.ndarray]] = None,
         ontologies: Optional[Union[Tuple, Dict[Any, Any]]] = None,
-        masking_fn: Optional[Callable] = None,
-        masking_fn_kwargs: Dict[str, Any] = {},
         **kwargs: dict,
     ) -> None:  # ty: ignore[call-non-callable]
         """Initializes the pipeline with components and configuration.
@@ -122,8 +122,6 @@ class BasePipeline(abc.ABC):
 
         self._validate_config(config=config)
         self._validate_user_input(data=data)
-        self.masking_fn = masking_fn
-        self.masking_fn_kwargs = masking_fn_kwargs
         processed_data = data if isinstance(data, DatasetContainer) else None
         raw_user_data = (
             data
@@ -476,10 +474,6 @@ class BasePipeline(abc.ABC):
             model_type=self._model_type,
             loss_type=self._loss_type,
             ontologies=self.ontologies,  # Ontix
-            masking_fn=self.masking_fn if hasattr(self, "masking_fn") else None,
-            masking_fn_kwargs=(
-                self.masking_fn_kwargs if hasattr(self, "masking_fn_kwargs") else None
-            ),
         )
 
         trainer_result: Result = self._trainer.train()
@@ -538,7 +532,7 @@ class BasePipeline(abc.ABC):
             original_input=original_input,
             predict_data=predict_data,
         )
-        self.result.update(predictor_results)
+
         return self.result
 
     def _validate_prediction_requirements(self):
@@ -860,7 +854,7 @@ class BasePipeline(abc.ABC):
             # Check size compatibility
             expected_latent_dim = self.config.latent_dim
             if not latent.shape[1] == expected_latent_dim:
-                if self._trainer._model._mu.out_features == latent.shape[1]:
+                if self._trainer._model._mu.in_features == latent.shape[1]:
                     warnings.warn(
                         f"latent_prior has latent dimension {latent.shape[1]}, "
                         "which matches the input feature dimension of the model. Did you "
@@ -871,7 +865,7 @@ class BasePipeline(abc.ABC):
                 else:
                     raise ValueError(
                         f"latent_prior has incompatible latent dimension {latent.shape[1]}, "
-                        f"expected {self.config.latent_dim}. or {self._trainer._model._mu.out_features}."
+                        f"expected {self.config.latent_dim}."
                     )
 
             latent_tensor = latent
@@ -1172,7 +1166,7 @@ class BasePipeline(abc.ABC):
                 f"latent_prior must be numpy.ndarray or torch.Tensor, got {type(latent_prior)}."
             )
         if not latent_prior.shape[1] == self.config.latent_dim:
-            if self._trainer._model._mu.out_features == latent_prior.shape[1]:
+            if self._trainer._model._mu.in_features == latent_prior.shape[1]:
                 warnings.warn(
                     f"latent_prior has latent dimension {latent_prior.shape[1]}, "
                     "which matches the input feature dimension of the model. Did you "
@@ -1198,13 +1192,13 @@ class BasePipeline(abc.ABC):
         obs_col: str = None,
         n_subset: int = 100,
         seed_int: int = 12,
-        split: Literal["train", "test", "valid"] = "train",
+        split : Literal["train", "test","valid"] = "train", 
         llm_explain: bool = False,
         llm_client: Literal["ollama", "mistral"] = "mistral",
         llm_model: str = "mistral-medium-latest",
-    ) -> pd.DataFrame:
+    )-> pd.DataFrame:  
         """Runs the feature-importance explainer and returns gene-by-latent-dimension attribution scores.
-
+        
         Args:
             method:  Specifies which attribution algorithm to use for explaining the model.
             baseline_type: Specifies whether the feature-importance algorithm should use the mean baseline or a random-sample baseline.
@@ -1213,9 +1207,9 @@ class BasePipeline(abc.ABC):
             n_subset: Specifies the number of cells to use when subsampling for the attribution computation.
             seed_int: Defines the random seed used for reproducible subsampling and attribution calculations.
             split: The split to use for feature importance calculation (train, valid, test), default is train.
-            llm_explain: Whether to use LLM explainers for feature importance calculation.
-            llm_client: The LLM client to use for feature importance calculation.
-            llm_model: The LLM model to use for feature importance calculation.
+            llm_explain:
+            llm_client:
+            llm_model:
 
         Returns:
             pd.DataFrame: The generated samples in the input space.
@@ -1233,14 +1227,14 @@ class BasePipeline(abc.ABC):
         adata_ACX: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
             dataset, split=split
         )
-        """
+        '''
         adata_test: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
             dataset, split="test"
         )
         adata_valid: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
             dataset, split="valid"
         )
-        """
+        '''
         model = self.result.model
         if model is None:
             raise ValueError(
@@ -1248,17 +1242,16 @@ class BasePipeline(abc.ABC):
                 "This happens if you used .save and .load, and did not run .fit before."
                 "This can also happen if you run .explain before .fit."
             )
-        explainer = FeatureImportanceExplainer(
-            adata_ACX=adata_ACX["global"],
-            model=model,
-            n_subset=n_subset,
-            method=method,
-            baseline_group=baseline_group,
-            obs_col=obs_col,
-            baseline_type=baseline_type,
-            seed_int=seed_int,
-        )
-        # return adata_train
+        explainer = FeatureImportanceExplainer(adata_ACX=adata_ACX['global'],
+                                               model = model,
+                                               n_subset = n_subset,
+                                               method=method,
+                                              baseline_group = baseline_group,
+                                              obs_col = obs_col,
+                                              baseline_type = baseline_type,
+                                              seed_int = seed_int,
+                                              )
+        #return adata_train
         df_attributions = explainer.explain()
         return df_attributions
         # also note tha adata_<split> can be None, if the split is not available
@@ -1279,6 +1272,3 @@ class BasePipeline(abc.ABC):
             print("LLM Explanation:")
             print(explanation)
             return explanation
-
-    def impute(self, corrupted_tensor: torch.Tensor):
-        raise NotImplementedError("Impute method only implemented for Maskix pipeline.")
