@@ -1199,7 +1199,7 @@ class BasePipeline(abc.ABC):
     )-> pd.DataFrame:  
         """Runs the feature-importance explainer and returns gene-by-latent-dimension attribution scores.
         
-        Args:x
+        Args:
             method:  Specifies which attribution algorithm to use for explaining the model.
             baseline_type: Specifies whether the feature-importance algorithm should use the mean baseline or a random-sample baseline.
             baseline_group: Specifies whether the baseline is computed using all data (default) or which subset in obs_col to filter for.
