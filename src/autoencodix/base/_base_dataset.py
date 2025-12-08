@@ -81,7 +81,7 @@ class BaseDataset(abc.ABC, Dataset):
                 return self.data[0].img.shape[0]
             else:
                 raise ValueError(
-                    "List data is not of type ImgData, cannot determine input dimension."
+                    f"List data is not of type ImgData, got {type(self.data[0])}, cannot determine input dimension."
                 )
         else:
             raise ValueError("Unsupported data type for input dimension retrieval.")

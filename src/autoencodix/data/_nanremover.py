@@ -1,4 +1,6 @@
 import anndata as ad  # type: ignore
+from pandas.api.types import is_numeric_dtype, is_categorical_dtype
+
 import warnings
 import pandas as pd
 import mudata as md  # type: ignore
@@ -65,17 +67,26 @@ class NaNRemover:
                 adata.layers[layer_name] = np.nan_to_num(layer_data, nan=0.0)
 
         # Handle obs metadata
-        if self.relevant_cols is not None:
-            print(adata.obs.columns)
-            for col in self.relevant_cols:
-                if col in adata.obs.columns:
-                    # Fill NaNs with "missing" for non-numeric columns
-                    if not pd.api.types.is_numeric_dtype(adata.obs[col]):
-                        # Add "missing" to categories first, then fill
-                        adata.obs[col] = adata.obs[col].cat.add_categories(["missing"])
-                        adata.obs[col] = (
-                            adata.obs[col].fillna("missing").astype("category")
-                        )
+        if not self.relevant_cols:
+            return adata
+
+        for col in self.relevant_cols:
+            if col not in adata.obs.columns:
+                warnings.warn(f"Column {col} not found in obs.")
+                continue
+            s = adata.obs[col]
+
+            if is_numeric_dtype(s):
+                adata.obs[col] = np.nan_to_num(s, nan=0.0)
+                continue
+            if not is_categorical_dtype(s):
+                s = s.astype("category")
+
+            if "missing" not in s.cat.categories:
+                s = s.cat.add_categories(["missing"])
+            s = s.fillna("missing")
+            adata.obs[col] = s
+
         return adata
 
     def remove_nan(self, data: DataPackage) -> DataPackage:

@@ -47,10 +47,8 @@ class XModalix(BasePipeline):
         data: Optional[Union[DataPackage, DatasetContainer]] = None,
         trainer_type: Type[BaseTrainer] = XModalTrainer,
         dataset_type: Type[BaseDataset] = MultiModalDataset,
-        model_type: Type[
-            BaseAutoencoder
-        ] = VarixArchitecture,  # TODO make custom for XModalix
-        loss_type: Type[BaseLoss] = XModalLoss,  # TODO make custom for XModalix
+        model_type: Type[BaseAutoencoder] = VarixArchitecture,
+        loss_type: Type[BaseLoss] = XModalLoss,
         preprocessor_type: Type[BasePreprocessor] = XModalPreprocessor,
         visualizer: Optional[Type[BaseVisualizer]] = XModalVisualizer,
         evaluator: Optional[Type[XModalixEvaluator]] = XModalixEvaluator,

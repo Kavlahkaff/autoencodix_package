@@ -1,4 +1,5 @@
 import abc
+from packaging.version import Version
 import random
 import numpy as np
 import os
@@ -97,12 +98,19 @@ class BaseTrainer(abc.ABC):
             lr=self._config.learning_rate,
             weight_decay=self._config.weight_decay,
         )
-
-        self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
         if old_model is None:
             self._trainloader = self._fabric.setup_dataloaders(self._trainloader)  # type: ignore
             if self._validloader is not None:
                 self._validloader = self._fabric.setup_dataloaders(self._validloader)  # type: ignore
+
+        if (
+            Version(torch.__version__) >= Version("2.0")
+            and torch.cuda.is_available()
+            and old_model is None
+        ):  # dont compile twice
+            self._model = torch.compile(self._model)
+
+        self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
 
     def _init_loaders(self):
         """Initializes the DataLoaders for training and validation datasets."""
@@ -124,6 +132,7 @@ class BaseTrainer(abc.ABC):
             shuffle=True,
             batch_size=corrected_bs,
             worker_init_fn=self._seed_worker,
+            pin_memory=self._config.pin_memory,
             # generator=g,
         )
         if self._validset:
@@ -144,6 +153,7 @@ class BaseTrainer(abc.ABC):
                 dataset=self._validset,
                 batch_size=self._config.batch_size,
                 shuffle=False,
+                pin_memory=self._config.pin_memory,
             )
         else:
             self._validloader = None  # type: ignore
