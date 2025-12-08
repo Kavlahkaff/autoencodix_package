@@ -7,8 +7,9 @@ from autoencodix.utils._model_output import ModelOutput
 class CaptumForward(nn.Module):
     def __init__(self, model: BaseAutoencoder, dim: int):
         super(CaptumForward, self).__init__()  # <-- REQUIRED
-        self.model = model   # (Registered as a submodule)
+        self.model = model  # (Registered as a submodule)
         self.dim = dim
+
     def forward(self, x: torch.Tensor):
         mp: ModelOutput = self.model(x=x)
         latent = mp.latentspace
