@@ -30,7 +30,7 @@ class AnnDataConverter:
         var = pd.DataFrame(index=pd.Index(ds.feature_ids, dtype=str))
         return {
             "global": ad.AnnData(
-                X = torch.tensor(ds.data.toarray()).detach().cpu().numpy(),
+                X=torch.tensor(ds.data.toarray()).detach().cpu().numpy(),
                 var=var,
                 obs=metadata,
             )
