@@ -1,4 +1,5 @@
 import abc
+from packaging.version import Version
 import random
 import numpy as np
 import os
@@ -102,30 +103,12 @@ class BaseTrainer(abc.ABC):
             if self._validloader is not None:
                 self._validloader = self._fabric.setup_dataloaders(self._validloader)  # type: ignore
 
-        # if torch.__version__ >= "2.0" and old_model is None:  # dont compile twice
-        #     import copy
-
-        #     uncompiled_model = copy.deepcopy(self._model)
-        #     try:
-        #         self._model.to(self._fabric.device.type)
-        #         self._model = torch.compile(self._model)
-
-        #         input_size: List[int] = [self._config.batch_size]
-        #         input_dim = self._trainloader.dataset.get_input_dim()
-        #         if isinstance(input_dim, int):
-        #             input_size.append(input_dim)
-        #         else:
-        #             input_size.extend(input_dim)
-        #         dummy_input = torch.randn(
-        #             input_size,
-        #             device=self._fabric.device.type,
-        #         )
-        #         print(self._model)
-        #         _ = self._model(dummy_input)
-
-        #     except Exception as e:
-        #         self._model = uncompiled_model
-        #         warnings.warn(f"Could not compile model. Original error message: {e}")
+        if (
+            Version(torch.__version__) >= Version("2.0")
+            and torch.cuda.is_available()
+            and old_model is None
+        ):  # dont compile twice
+            self._model = torch.compile(self._model)
 
         self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
 
@@ -251,8 +234,9 @@ class BaseTrainer(abc.ABC):
 
     def _should_checkpoint(self, epoch: int) -> bool:
         return (
-            epoch + 1
-        ) % self._config.checkpoint_interval == 0 or epoch == self._config.epochs - 1
+            (epoch + 1) % self._config.checkpoint_interval == 0
+            or epoch == self._config.epochs - 1
+        )
 
     @abc.abstractmethod
     def train(self, epochs_overwrite: Optional[int] = None) -> Result:
