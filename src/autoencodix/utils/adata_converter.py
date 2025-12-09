@@ -5,6 +5,7 @@ from autoencodix.data._datasetcontainer import DatasetContainer
 import anndata as ad
 import pandas as pd
 import torch
+from scipy.sparse import issparse
 
 
 class AnnDataConverter:
@@ -20,17 +21,28 @@ class AnnDataConverter:
         Returns:
             An AnnData object containing the dataset's data, features, and metadata.
         """
-        if not isinstance(ds.metadata, pd.DataFrame):
-            raise ValueError(
-                f"metadata needs to be pd.DataFrame, got {type(ds.metadata)}"
-            )
+
         metadata = ds.metadata.copy()
+        if isinstance(metadata, dict):
+            if len(metadata) != 1:
+                raise NotImplementedError(
+                    "Unpaired metadata conversion not implemented yet. Expected single modality."
+                )
+            first_key = next(iter(metadata.keys()))
+            metadata = metadata[first_key]
+        if not isinstance(metadata, pd.DataFrame):
+            raise ValueError(f"metadata needs to be pd.DataFrame, got {type(metadata)}")
         metadata.index = metadata.index.astype(str)
 
         var = pd.DataFrame(index=pd.Index(ds.feature_ids, dtype=str))
+        # check if ds.data issparse
+        if issparse(ds.data):
+            x = ds.data.toarray()
+        else:
+            x = ds.data
         return {
             "global": ad.AnnData(
-                X=torch.tensor(ds.data.toarray()).detach().cpu().numpy(),
+                X=x.clone().detach().cpu().numpy(),
                 var=var,
                 obs=metadata,
             )
