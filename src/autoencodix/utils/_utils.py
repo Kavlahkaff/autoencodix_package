@@ -16,6 +16,7 @@ from autoencodix.utils._result import Result
 
 import dill as pickle  # type: ignore
 import torch
+import pandas as pd
 from matplotlib import pyplot as plt
 
 from autoencodix.configs.default_config import DefaultConfig
@@ -645,3 +646,33 @@ def find_translation_keys(
     assert from_key_final is not None and to_key_final is not None
 
     return {"from": from_key_final, "to": to_key_final}
+
+
+def preprocess_explanations(
+    df: pd.DataFrame, n: int = 10, max_dims: int = 8
+) -> Dict[str, List[str]]:
+    """
+    Transform a DataFrame of gene attributions into a dictionary mapping each
+    (selected) latent dimension to its top-n genes.
+
+    The function:
+    - Computes the mean attribution for each latent dimension.
+    - Selects the top `max_dims` most informative dimensions (highest mean).
+    - Extracts the top-n genes for each selected dimension.
+
+    Args:
+        df: Output DataFrame of gene attributions from explainix.
+        n: Number of top genes to include per latent dimension.
+        max_dims: Maximum number of latent dimensions to retain.
+
+    Returns:
+        Dictionary with latent dimensions as keys and lists of top gene names as values.
+    """
+    # Identify top latent dimensions by mean attribution
+    top_dims = df.mean(axis=0).nlargest(max_dims).index
+
+    result = {}
+    for col in top_dims:
+        result[col] = df.nlargest(n, col).index.tolist()
+
+    return result

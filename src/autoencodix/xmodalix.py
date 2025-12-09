@@ -2,7 +2,8 @@ from typing import Dict, Optional, Type, Union, Literal
 import numpy as np
 
 import anndata as ad  # type: ignore
-from autoencodix.base._base_dataset import BaseDataset
+
+from autoencodix.base._base_dataset import BaseDataset, DataSetTypes
 from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_pipeline import BasePipeline
 from autoencodix.base._base_trainer import BaseTrainer
@@ -11,6 +12,8 @@ from autoencodix.base._base_preprocessor import BasePreprocessor
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._multimodal_dataset import MultiModalDataset
+
+from autoencodix.modeling._imagevae_architecture import ImageVAEArchitecture
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.modeling._varix_architecture import VarixArchitecture
@@ -56,6 +59,10 @@ class XModalix(BasePipeline):
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
         config: Optional[DefaultConfig] = None,
+        model_map: Dict[DataSetTypes, Type[BaseAutoencoder]] = {
+            DataSetTypes.NUM: VarixArchitecture,
+            DataSetTypes.IMG: ImageVAEArchitecture,
+        },
     ) -> None:
         """See base class for full list of Args."""
         self._default_config = XModalixConfig()
@@ -72,6 +79,7 @@ class XModalix(BasePipeline):
             datasplitter_type=datasplitter_type,
             config=config,
             custom_split=custom_splits,
+            model_map=model_map,
         )
         if not isinstance(self.config, XModalixConfig):
             raise TypeError(

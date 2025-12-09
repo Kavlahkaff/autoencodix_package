@@ -25,6 +25,12 @@ from IPython.display import HTML, Image, clear_output, display
 from autoencodix.modeling._captum_forward import CaptumForward
 from autoencodix.utils.adata_converter import AnnDataConverter
 
+warnings.filterwarnings(
+    "ignore",
+    message="Setting forward, backward hooks and attributes on non-linear",
+    category=UserWarning,
+)
+
 warnings.filterwarnings("ignore")
 
 

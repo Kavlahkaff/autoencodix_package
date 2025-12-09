@@ -113,6 +113,8 @@ class Result:
 
     # Embedding evaluation results
     embedding_evaluation: pd.DataFrame = field(default_factory=pd.DataFrame)
+    embedding_attributions: pd.DataFrame = field(default_factory=pd.DataFrame)
+    embedding_explanations: Dict[str, str] = field(default_factory=dict)
 
     # plots: Dict[str, Any] = field(
     #     default_factory=nested_dict

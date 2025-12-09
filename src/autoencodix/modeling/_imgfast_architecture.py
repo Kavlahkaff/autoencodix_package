@@ -28,7 +28,7 @@ class DepthwiseSeparableConv2d(nn.Module):
         return self.pointwise(self.depthwise(x))
 
 
-class ImageVAEArchitecture(BaseAutoencoder):
+class ImageVAEFastArchitecture(BaseAutoencoder):
     """Optimized VAE architecture with channels-last memory format support"""
 
     def __init__(

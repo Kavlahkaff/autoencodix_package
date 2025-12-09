@@ -1,20 +1,22 @@
 import torch
 import numpy as np
 import scipy
-from autoencodix.base._base_autoencoder import BaseAutoencoder
-from ._model_output import ModelOutput
-import torch.nn as nn
 import pandas as pd
-from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.modeling._captum_forward import CaptumForward
+from typing import Optional
 from captum.attr import (
-    LRP,
     DeepLiftShap,
-    GradientShap,
     IntegratedGradients,
-    Lime,
-    LimeBase,
 )
+import warnings
+
+warnings.filterwarnings(
+    "ignore",
+    message="Setting forward, backward hooks and attributes on non-linear",
+    category=UserWarning,
+)
+
+warnings.filterwarnings("ignore")
 
 
 class FeatureImportanceExplainer:
@@ -28,17 +30,17 @@ class FeatureImportanceExplainer:
 
     def __init__(
         self,
-        adata_ACX,
+        adata,
         model,
         method: str = "DeepLiftShap",
         n_subset: int = 100,
         seed_int: int = 12,
         baseline_type: str = "mean",  # ["mean", "random"]
         baseline_group: str = "all",  # "all" or obs_col category
-        obs_col: str = None,  # column in .obs for grouping
+        obs_col: Optional[str] = None,  # column in .obs for grouping
     ):
         super(FeatureImportanceExplainer, self).__init__()
-        self.adata_ACX = adata_ACX
+        self.adata_ACX = adata
         self.model = model
         self.latent_dim = model.config.latent_dim
 

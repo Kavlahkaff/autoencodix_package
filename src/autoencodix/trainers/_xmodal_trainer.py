@@ -72,11 +72,8 @@ class XModalTrainer(BaseTrainer):
         config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
+        model_map: Dict[DataSetTypes, Type[BaseAutoencoder]],
         sub_loss_type: Type[BaseLoss] = VarixLoss,
-        model_map: Dict[DataSetTypes, Type[BaseAutoencoder]] = {
-            DataSetTypes.NUM: VarixArchitecture,
-            DataSetTypes.IMG: ImageVAEArchitecture,
-        },
         ontologies: Optional[Union[Tuple, List]] = None,
         **kwargs,
     ):

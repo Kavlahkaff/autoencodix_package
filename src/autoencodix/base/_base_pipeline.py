@@ -1,6 +1,5 @@
 import abc
 from typing import Dict, Optional, Tuple, Type, Union, Any, Literal, List, Callable
-import scipy
 import warnings
 import anndata as ad  # type: ignore
 import numpy as np
@@ -21,7 +20,8 @@ from autoencodix.data.datapackage import DataPackage
 # from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.base._base_evaluator import BaseEvaluator
 from autoencodix.utils._result import Result
-from autoencodix.utils._utils import Loader, Saver, get_dataset
+from autoencodix.utils.prompts import PROMPT
+from autoencodix.utils._utils import Loader, Saver, get_dataset, preprocess_explanations
 from autoencodix.utils.adata_converter import AnnDataConverter
 from autoencodix.utils._explainer import FeatureImportanceExplainer
 from autoencodix.utils._llm_explainer import LLMExplainer
@@ -119,7 +119,7 @@ class BasePipeline(abc.ABC):
                             For more details, please refer to the 'how to add a new architecture' section in our documentation.
                             """
             )
-
+        self.model_map = kwargs.pop("model_map", None)
         self._validate_config(config=config)
         self._validate_user_input(data=data)
         self.masking_fn = masking_fn
@@ -480,6 +480,7 @@ class BasePipeline(abc.ABC):
             masking_fn_kwargs=(
                 self.masking_fn_kwargs if hasattr(self, "masking_fn_kwargs") else None
             ),
+            model_map=self.model_map,
         )
 
         trainer_result: Result = self._trainer.train()
@@ -1195,13 +1196,15 @@ class BasePipeline(abc.ABC):
         method: Literal["DeepLiftShap", "IntegratedGradients"] = "DeepLiftShap",
         baseline_type: Literal["mean", "random_sample"] = "mean",
         baseline_group: str = "all",
-        obs_col: str = None,
+        obs_col: Optional[str] = None,
         n_subset: int = 100,
         seed_int: int = 12,
         split: Literal["train", "test", "valid"] = "train",
         llm_explain: bool = False,
         llm_client: Literal["ollama", "mistral"] = "mistral",
-        llm_model: str = "mistral-medium-latest",
+        llm_model: str = "mistral-large-latest",
+        top_n_genes: int = 40,
+        prompt: str = PROMPT,
     ) -> pd.DataFrame:
         """Runs the feature-importance explainer and returns gene-by-latent-dimension attribution scores.
 
@@ -1216,6 +1219,7 @@ class BasePipeline(abc.ABC):
             llm_explain: Whether to use LLM explainers for feature importance calculation.
             llm_client: The LLM client to use for feature importance calculation.
             llm_model: The LLM model to use for feature importance calculation.
+            top_n_genes: How many top (contribution to embedding) genes to consider for LLM explanation.
 
         Returns:
             pd.DataFrame: The generated samples in the input space.
@@ -1230,17 +1234,13 @@ class BasePipeline(abc.ABC):
                 "This happens if you used .save and .load, and did not run .predict before."
                 "This can also happen if you run .explain before .preprocess or .fit."
             )
-        adata_ACX: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
+        adata: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
             dataset, split=split
         )
-        """
-        adata_test: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
-            dataset, split="test"
-        )
-        adata_valid: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
-            dataset, split="valid"
-        )
-        """
+        if adata is None:
+            raise ValueError(
+                "There has been an error converting the dataset to AnnData."
+            )
         model = self.result.model
         if model is None:
             raise ValueError(
@@ -1249,7 +1249,7 @@ class BasePipeline(abc.ABC):
                 "This can also happen if you run .explain before .fit."
             )
         explainer = FeatureImportanceExplainer(
-            adata_ACX=adata_ACX["global"],
+            adata=adata["global"],
             model=model,
             n_subset=n_subset,
             method=method,
@@ -1258,27 +1258,30 @@ class BasePipeline(abc.ABC):
             baseline_type=baseline_type,
             seed_int=seed_int,
         )
-        # return adata_train
         df_attributions = explainer.explain()
-        return df_attributions
-        # also note tha adata_<split> can be None, if the split is not available
-        # so best to check this before concatenating or using them
 
         if llm_explain:
-            # TODO Vincent:
-            # Je nachdem wie die Gene Liste aussieht, müsstet du noch in src/autoencodix/utils/_llm_explainer.py
-            # in _init_prompt anpassen, wie der prompt gebaut wird. Ich gehe jetzt von einer Liste aus String aus, aber
-            # ich wusste nicht genau was dein return Typ ist.
+            gene_attributions: Dict[str, List] = preprocess_explanations(
+                df_attributions
+            )
+            if len(gene_attributions) > 8:
+                warnings.warn(
+                    "You requested LLM-generated explanations for each latent dimension. "
+                    "However, more than eight latent dimensions were provided. To avoid excessively long "
+                    "and computationally intensive output, only the eight most informative latent "
+                    "dimensions will be analyzed."
+                )
 
             llm_explainer = LLMExplainer(
                 client_name=llm_client,
                 model_name=llm_model,
-                gene_list=["GeneA", "GeneB", "GeneC"],  # Example gene list
+                genes_to_latent=gene_attributions,  # Example gene list
+                prompt=prompt,
             )
             explanation = llm_explainer.explain()
-            print("LLM Explanation:")
-            print(explanation)
-            return explanation
+            self.result.embedding_explanations = explanation
+        self.result.embedding_attributions = df_attributions
+        return df_attributions
 
     def impute(self, corrupted_tensor: torch.Tensor):
         raise NotImplementedError("Impute method only implemented for Maskix pipeline.")
