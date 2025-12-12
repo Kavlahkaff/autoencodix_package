@@ -6,7 +6,8 @@ module load release/25.06
 
 # Retrieve chunks in parallel 
 total_parts=16
-for i in {0..$((total_parts))};do # Parallelize on HPC for speed up (takes around 24h)
+for i in $(seq 0 $total_parts);do # Parallelize on HPC for speed up (takes around 24h)
+	echo "Submitting job for part $i out of $total_parts"
 	sbatch <<-EOT
 	#!/bin/bash
 	#SBATCH --job-name=large_ontix_census
