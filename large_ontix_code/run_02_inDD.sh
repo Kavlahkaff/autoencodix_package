@@ -5,7 +5,8 @@ module purge
 module load release/25.06
 
 # Retrieve chunks in parallel 
-for i in {0..12};do # Parallelize on HPC for speed up (takes around 24h)
+total_parts=16
+for i in {0..$((total_parts))};do # Parallelize on HPC for speed up (takes around 24h)
 	sbatch <<-EOT
 	#!/bin/bash
 	#SBATCH --job-name=large_ontix_census
@@ -13,13 +14,13 @@ for i in {0..12};do # Parallelize on HPC for speed up (takes around 24h)
 	#SBATCH --error=./logs/slurm_%a_%j.err
 	#SBATCH --nodes=1
 	#SBATCH --tasks-per-node=1
-	#SBATCH --cpus-per-task=8
-	#SBATCH --mem-per-cpu=4096
-	#SBATCH --time=1:00:00
+	#SBATCH --cpus-per-task=12
+	#SBATCH --mem-per-cpu=12000
+	#SBATCH --time=48:00:00
 
 	source .venv/bin/activate
 	# Define chunks
-	python large_ontix_code/01_get_census_data.py "step2" $i "test" # Test mode with only 48 chunks for quick testing
+	python large_ontix_code/01_get_census_data.py "step2" $i "full" $total_parts # Test mode with only 48 chunks for quick testing
 
 	exit 0
 	EOT

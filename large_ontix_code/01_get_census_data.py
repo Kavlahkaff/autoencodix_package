@@ -92,7 +92,9 @@ if step_from_cli == "step2":
 	else:
 		part = 0
 	
-	total_parts = 12
+	# total_parts = 12
+	total_parts = sys.argv[4] if len(sys.argv) > 4 else 12
+	total_parts = int(total_parts)
 	
 	if test_mode == "test":
 		print("Test mode: only process last 48 chunks")
