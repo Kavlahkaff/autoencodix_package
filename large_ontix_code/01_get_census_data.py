@@ -2,9 +2,9 @@
 import sys
 
 # data_folder = "./data/census_chunks/"
-data_folder = "/projects/p_scads_autoencodix/large_ontix_project/census_chunks/"
+data_folder = "/data/horse/ws/jaew523d-large_ontix_project/census_chunks/"
 # llm_ontology_folder = "./data/llm_ontologies/final_ontologies/"
-llm_ontology_folder = "/projects/p_scads_autoencodix/large_ontix_project/final_ontologies/"
+llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
 max_chunk_size = 1000 # Downsample chunks larger than this size
 perc_genes = 0.05 # Filter cells with lower than this percentage of genes expressed
 
