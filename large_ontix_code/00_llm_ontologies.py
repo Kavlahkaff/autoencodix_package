@@ -1,43 +1,45 @@
-# ### Define prompt ###
-# # number of latent dimensions
-# latent_dims = [10, 24]
-# second_level_range = "5-20"
-# # Ontology sources to consider
-# ontology_sources = ["KEGG", "Reactome", "Gene Ontology"]
-# # Organism
-# organism = "human"
-# # Example json format
-# example_json_file = "./data/llm_ontologies/example.json"
-# # Read example json format
-# with open(example_json_file, "r") as f:
-# 	example_json = f.read()
+### Define prompt ###
+# number of latent dimensions
+latent_dims = [10, 24]
+second_level_range = "5-20"
+# Ontology sources to consider
+ontology_sources = ["KEGG", "Reactome", "Gene Ontology"]
+# Organism
+organism = "human"
+# Example json format
+example_json_file = "./data/llm_ontologies/example.json"
+# Read example json format
+with open(example_json_file, "r") as f:
+	example_json = f.read()
 
-# prompt_combinations = []
+prompt_combinations = []
 
-# for dims in latent_dims:	
+for dims in latent_dims:	
 
-# 	prompt_template = f"""Define a list of {dims} dimensions which describe the state, functions, metabolism and role of cells in {organism}.
-# 	The dimensions should be distinct and comprise all relevant aspects of cellular biology to discriminate all cells in the {organism} body along those dimensions.
-# 	The dimensions should be useful to classify and compare cells within an organism like {organism}.
-# 	Phrase and adjust the dimensions such that they measurable by gene expression data.
-# 	Finally, assign each of the ten dimension the {second_level_range} most relevant and characterizing pathways or ontology terms with their respective identifier from databases like {" or ".join(ontology_sources)}.
-# 	Please, avoid largely overlapping and duplicated terms from different sources. For example, use only TCA cycle from either KEGG or Reactome but not both as terms or pathways linked to a dimension.
-# 	Try to identify the {second_level_range} most important but distinct subterms regardless of their database source. Give your answer in the following JSON format:
-# 	{example_json}
-# 	Make sure to follow the JSON format exactly without any additional text outside the JSON structure.
-# 	"""
-# 	prompt_combinations.append(prompt_template)
+	prompt_template = f"""Define a list of exactly {dims} dimensions which describe the state, functions, metabolism and role of cells in {organism}.
+	The dimensions should be distinct and comprise all relevant aspects of cellular biology to discriminate all cells in the {organism} body along those dimensions.
+	The dimensions should be useful to classify and compare cells within an organism like {organism}.
+	Phrase and adjust the dimensions such that they measurable by gene expression data.
+	Finally, assign each of the {dims} dimension the {second_level_range} most relevant and characterizing pathways or ontology terms with their respective identifier from databases like {" or ".join(ontology_sources)}.
+	Please, avoid largely overlapping and duplicated terms from different sources. For example, use only TCA cycle from either KEGG or Reactome but not both as terms or pathways linked to a dimension.
+	Try to identify the {second_level_range} most important but distinct subterms regardless of their database source. 
+    Find a set of subterms and dimension which comprise most genes possible to cover a large part of the transcriptome.
+    Give your answer in the following JSON format:
+	{example_json}
+	Make sure to follow the JSON format exactly without any additional text outside the JSON structure.
+	"""
+	prompt_combinations.append(prompt_template)
 
-# ### Save prompts to txt-file ###
-# import os
+### Save prompts to txt-file ###
+import os
 
-# output_dir = "./data/llm_ontologies/prompts"
-# os.makedirs(output_dir, exist_ok=True)
+output_dir = "./data/llm_ontologies/prompts"
+os.makedirs(output_dir, exist_ok=True)
 
-# for i, prompt in enumerate(prompt_combinations):
-#     with open(os.path.join(output_dir, f"prompt_{latent_dims[i]}.txt"), "w") as f:
-#         f.write(prompt)
-# #############################################
+for i, prompt in enumerate(prompt_combinations):
+    with open(os.path.join(output_dir, f"prompt_{latent_dims[i]}.txt"), "w") as f:
+        f.write(prompt)
+#############################################
 
 ### Retrieve Gene IDs for Ontology Terms ###
 import os
@@ -154,6 +156,8 @@ ontology_names = list(ontology_gene_sets.keys())
 if len(ontology_names) > 1:
 	overlap_genes = set.intersection(*(ontology_gene_sets[name] for name in ontology_names))
 	print(f"Number of overlapping genes among all ontologies: {len(overlap_genes)}")
+	union_genes = set.union(*(ontology_gene_sets[name] for name in ontology_names))
+	print(f"Number of genes in union of all ontologies: {len(union_genes)}")
 else:
 	print("Only one ontology present, no overlap calculation.")
 

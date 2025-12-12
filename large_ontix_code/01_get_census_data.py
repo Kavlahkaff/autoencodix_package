@@ -1,8 +1,10 @@
 ##### STEP 0 - Definitions #####
 import sys
 
-data_folder = "./data/census_chunks/"
-llm_ontology_folder = "./data/llm_ontologies/"
+# data_folder = "./data/census_chunks/"
+data_folder = "/projects/p_scads_autoencodix/large_ontix_project/census_chunks/"
+# llm_ontology_folder = "./data/llm_ontologies/final_ontologies/"
+llm_ontology_folder = "/projects/p_scads_autoencodix/large_ontix_project/final_ontologies/"
 max_chunk_size = 1000 # Downsample chunks larger than this size
 perc_genes = 0.05 # Filter cells with lower than this percentage of genes expressed
 
@@ -93,8 +95,8 @@ if step_from_cli == "step2":
 	total_parts = 12
 	
 	if test_mode == "test":
-		print("Test mode: only process last 24 chunks")
-		all_chunks = human_meta_counts.index[::-1][0:24] # Last 24 chunks for testing  
+		print("Test mode: only process last 48 chunks")
+		all_chunks = human_meta_counts.index[::-1][0:48] # Last 48 chunks for testing  
 	else:
 		all_chunks = human_meta_counts.index[:]
 	num_chunks = len(all_chunks)

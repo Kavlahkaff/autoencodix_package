@@ -6,7 +6,7 @@ import autoencodix as acx
 from autoencodix.configs.ontix_config import OntixConfig
 
 data_final_folder = "./data/large_sc_data/"
-llm_ontology_folder = "./data/llm_ontologies/"
+llm_ontology_folder = "./data/llm_ontologies/final_ontologies/"
 results_folder = "./results/large_ontix_save/"
 
 ont_from_cli = sys.argv[1]  # "chatgpt_ontology__", "custom_ontology__"

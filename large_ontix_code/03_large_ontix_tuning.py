@@ -21,10 +21,12 @@ n_workers = int(sys.argv[3])  # number of parallel workers for tuning
 
 metric = "ml_performance" # "ml_performance" or "recon_loss"
 
-tasks = ["cell_type", "tissue", "development_stage", "sex", "disease"] 
+# tasks = ["cell_type", "tissue", "development_stage", "sex", "disease"] 
+tasks = ["tissue_general", "sex", "disease"] # For testing
 
-# file_processed = os.path.join(data_final_folder, "census-acxcontainer_tune.pkl")
-file_processed = os.path.join(data_final_folder, "census-acxcontainer_train.pkl") ## Only for testing
+
+file_processed = os.path.join(data_final_folder, "census-acxcontainer_tune.pkl")
+# file_processed = os.path.join(data_final_folder, "census-acxcontainer_train.pkl") ## Only for testing
 
 
 #### Step 1 - Definition of syne_trainer function #####
@@ -54,7 +56,7 @@ def syne_trainer(
 	from autoencodix.configs.ontix_config import OntixConfig
 	from syne_tune import Reporter
 
-	llm_ontology_folder = "./data/llm_ontologies/"
+	llm_ontology_folder = "./data/llm_ontologies/final_ontologies/"
 	
 	file_pkl = data_path
 

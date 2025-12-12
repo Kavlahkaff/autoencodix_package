@@ -4,7 +4,6 @@ import os
 import sys
 
 data_final_folder = "./data/large_sc_data/"
-# llm_ontology_folder = "./data/llm_ontologies/"
 results_folder = "./results/large_ontix_save/"
 
 ont_from_cli = sys.argv[1]  # "chatgpt_ontology__", "custom_ontology__"
@@ -61,7 +60,7 @@ loaded_ontix.visualizer.show_latent_space(
 #### Step 3 - Evaluate embeddings ####
 import sklearn
 from sklearn import linear_model
-tasks = ["cell_type", "tissue", "development_stage", "sex", "disease"] 
+tasks = ["cell_type", "tissue_general", "development_stage", "sex", "disease"] 
 
 sklearn.set_config(enable_metadata_routing=True)
 
