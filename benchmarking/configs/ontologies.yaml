@@ -1,0 +1,18 @@
+tcga:
+  chromosome:
+    paths:
+      lvl1: "/data/horse/ws/luth474h-autoencodix_synetune/data/chromosome_ont_lvl2.txt"
+      lvl2: "/data/horse/ws/luth474h-autoencodix_synetune/data/chromosome_ont_lvl1_ncbi.txt"
+  reactome:
+    paths:
+      lvl1: "/data/horse/ws/luth474h-autoencodix_synetune/data/full_ont_lvl2_reactome.txt"
+      lvl2: "/data/horse/ws/luth474h-autoencodix_synetune/data/full_ont_lvl1_reactome.txt"
+schc:
+    chromosome:
+        paths:
+          lvl1: "/data/horse/ws/luth474h-autoencodix_synetune/data/chromosome_ont_lvl2.txt"
+          lvl2: "/data/horse/ws/luth474h-autoencodix_synetune/data/chromosome_ont_lvl1_ensembl.txt"
+    reactome:
+        paths:
+          lvl1: "/data/horse/ws/luth474h-autoencodix_synetune/data/full_ont_lvl2_reactome.txt"
+          lvl2: "/data/horse/ws/luth474h-autoencodix_synetune/data/full_ont_lvl1_ensembl_reactome.txt"
