@@ -137,12 +137,19 @@ class NaNRemover:
             processed = {k: None for k, _ in data.multi_sc.items()}
 
             for k, v in data.multi_sc.items():
-                # we know from screader that there is only one modality
-                for modkey, adata in v.mod.items():
-                    processed_mod = self._process_modality(adata=adata)
-                    processed_mod = md.MuData({modkey: processed_mod})
-                processed[k] = processed_mod
-            data.multi_sc = processed
+                if isinstance(v, dict):
+                    for sub_k, sub_v in v.items():
+                        processed_mod = self._process_modality(adata=sub_v)
+                        processed_mod = md.MuData({sub_k: processed_mod})
+                        processed[sub_k] = processed_mod
+
+                else:
+                    for modkey, adata in v.mod.items():
+                        processed_mod = self._process_modality(adata=adata)
+                        processed_mod = md.MuData({modkey: processed_mod})
+                    processed[k] = processed_mod
+            processed_clean = {k: v for k, v in processed.items() if v}
+            data.multi_sc = processed_clean
 
         # Handle from_modality and to_modality (for translation cases)
         for direction in ["from_modality", "to_modality"]:

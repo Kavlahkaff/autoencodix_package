@@ -54,6 +54,7 @@ dev = [
     "mkdocs-gen-files>=0.6.0",
     "mkdocs-literate-nav>=0.6.2",
     "mkdocs-section-index>=0.3.10",
+    "torch-tb-profiler>=0.4.3",
 ]
 
 [build-system]

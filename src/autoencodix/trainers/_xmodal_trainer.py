@@ -359,7 +359,9 @@ class XModalTrainer(BaseTrainer):
                         epoch_dynamics.append(batch_capture)
 
         sub_losses["clf_loss"] = total_clf_loss
-        n_samples_total /= self._n_train_modalities  # n_modalities because each sample is counted once per modality and n_modalites is the same for train and valid
+        n_samples_total /= (
+            self._n_train_modalities
+        )  # n_modalities because each sample is counted once per modality and n_modalites is the same for train and valid
         for k, v in sub_losses.items():
             if "_factor" not in k:
                 sub_losses[k] = v / n_samples_total  # Average over all samples
@@ -385,7 +387,9 @@ class XModalTrainer(BaseTrainer):
         self._epoch_loss = 0
         epoch_dynamics: List[Dict] = []
         sub_losses: Dict[str, float] = defaultdict(float)
-        n_samples_total: int = 0  # because of unpaired training we need to sum the samples instead of using len(dataset)
+        n_samples_total: int = (
+            0  # because of unpaired training we need to sum the samples instead of using len(dataset)
+        )
 
         for batch in self._trainloader:
             with self._fabric.autocast():
@@ -601,13 +605,13 @@ class XModalTrainer(BaseTrainer):
                 translation_key = "translation"
 
                 reference_key = f"reference_{to_key}_to_{to_key}"
-                batch_capture["reconstructions"][translation_key] = (
-                    translated.cpu().numpy()
-                )
+                batch_capture["reconstructions"][
+                    translation_key
+                ] = translated.cpu().numpy()
 
-                batch_capture["reconstructions"][reference_key] = (
-                    to_to_reference.cpu().numpy()
-                )
+                batch_capture["reconstructions"][
+                    reference_key
+                ] = to_to_reference.cpu().numpy()
 
                 if "sample_ids" in batch[from_key]:
                     batch_capture["sample_ids"][translation_key] = np.array(
@@ -665,9 +669,9 @@ class XModalTrainer(BaseTrainer):
 
             model_output = dynamics["mp"]
             captured_data["latentspaces"][mod_name] = model_output.latentspace.detach()
-            captured_data["reconstructions"][mod_name] = (
-                model_output.reconstruction.detach()
-            )
+            captured_data["reconstructions"][
+                mod_name
+            ] = model_output.reconstruction.detach()
             if model_output.latent_mean is not None:
                 captured_data["mus"][mod_name] = model_output.latent_mean.detach()
             if model_output.latent_logvar is not None:
@@ -888,7 +892,9 @@ class XModalTrainer(BaseTrainer):
                 active=3,  # Profile 3 batches
                 repeat=1,  # Do this once
             ),
-            on_trace_ready=torch.profiler.tensorboard_trace_handler("./profiler_logs"),
+            on_trace_ready=torch.profiler.tensorboard_trace_handler(
+                "./profiler_logs", worker_name=self._config.profile_logs
+            ),
         ) as prof:
             train_iter = iter(self._trainloader)
             for batch_idx, batch in enumerate(self._trainloader):
@@ -968,7 +974,7 @@ class XModalTrainer(BaseTrainer):
         import csv
         from pathlib import Path
 
-        csv_path = Path(f"./profile_logs/{self._config.profile_logs}.csv")
+        csv_path = Path(f"./profiler_logs/{self._config.profile_logs}.csv")
         csv_path.parent.mkdir(parents=True, exist_ok=True)
 
         with csv_path.open(mode="w", newline="") as f:

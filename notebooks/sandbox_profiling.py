@@ -172,6 +172,63 @@ def profile_x_modal_st():
     #
 
 
+def profile_x_modal_sc():
+
+    from autoencodix.configs.xmodalix_config import XModalixConfig
+    from autoencodix.configs.default_config import DataConfig, DataInfo, DataCase
+    from autoencodix.modeling._imgfast_architecture import ImageVAEFastArchitecture
+    from autoencodix.modeling._varix_architecture import VarixArchitecture
+
+    rna_file = os.path.join("data/raw/scRNA_human_cortex.h5ad")
+
+    atac_file = os.path.join("data/raw/scATAC_human_cortex.h5ad")
+
+    xmodalix_config = XModalixConfig(
+        checkpoint_interval=100,
+        epochs=1,
+        class_param="cell_type",
+        beta=0.1,
+        gamma=10,
+        delta_class=100,
+        delta_pair=300,
+        latent_dim=6,
+        k_filter=1000,
+        batch_size=512,
+        profiling=True,
+        profile_logs="XM_SC_TCGA",
+        learning_rate=0.0005,
+        requires_paired=False,
+        loss_reduction="sum",
+        data_case=DataCase.SINGLE_CELL_TO_SINGLE_CELL,
+        data_config=DataConfig(
+            data_info={
+                "atac": DataInfo(
+                    file_path=atac_file,
+                    data_type="NUMERIC",
+                    translate_direction="to",
+                    is_single_cell=True,
+                    pretrain_epochs=0,
+                ),
+                "rna": DataInfo(
+                    file_path=rna_file,
+                    data_type="NUMERIC",
+                    scaling="STANDARD",
+                    pretrain_epochs=0,
+                    translate_direction="from",
+                    is_single_cell=True,
+                ),
+            },
+            annotation_columns=["cell_type"],
+        ),
+    )
+
+    xmodalix = acx.XModalix(config=xmodalix_config)
+
+    result = xmodalix.run()
+    del xmodalix
+    del result
+
+
 if __name__ == "__main__":
     print("Running XModalix TCGA with Uhler architecture, key: 'XM-StArch_TCGA")
     profile_x_modal_st()
@@ -180,4 +237,6 @@ if __name__ == "__main__":
     # TODO add run with fast image architecture
     print("Running XModalix TCGA with fast image architecture, key: XM_FastArch_TCGA")
     profile_x_modal_fst()
-    # TODO add two large non image modaliteys
+
+    print("Running XModalix profiling with two SC modalities, key: XM_SC_TCGA")
+    profile_x_modal_sc()
