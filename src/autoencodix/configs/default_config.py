@@ -406,6 +406,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=False,
         description="Internal Only: if set to true runs torch.profiler on xmodalix trainer",
     )
+    profile_logs: str = Field(default="profile")
 
     ##### VALIDATION ##### -----------------------------------------------------
     ##### ----------------- -----------------------------------------------------
