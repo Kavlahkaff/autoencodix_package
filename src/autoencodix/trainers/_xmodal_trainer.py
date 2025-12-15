@@ -141,6 +141,7 @@ class XModalTrainer(BaseTrainer):
             dynamics["model"], dynamics["optim"] = self._fabric.setup(
                 dynamics["model"], dynamics["optim"]
             )
+            dynamics["model"].mark_forward_method("decode")
 
     def _init_loaders(self):
         """Initializes DataLoaders with smart sampler selection based on pairing."""
