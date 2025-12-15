@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Converted from Jupyter Notebook: notebook.ipynb
 Conversion Date: 2025-12-05T06:12:07.432Z
@@ -23,7 +21,8 @@ Conversion Date: 2025-12-05T06:12:07.432Z
 #   - image vs single cell
 
 import os
-
+import sys
+import time
 
 import torch
 import numpy as np
@@ -63,7 +62,7 @@ def profile_x_modal_fst():
     xmodalix_config = XModalixConfig(
         checkpoint_interval=100,
         class_param="CANCER_TYPE",
-        epochs=3,
+        epochs=EPOCHS,
         beta=0.1,
         gamma=10,
         delta_class=100,
@@ -126,7 +125,7 @@ def profile_x_modal_st():
     xmodalix_config = XModalixConfig(
         checkpoint_interval=100,
         class_param="CANCER_TYPE",
-        epochs=1,
+        epochs=EPOCHS,
         beta=0.1,
         gamma=10,
         delta_class=100,
@@ -173,7 +172,6 @@ def profile_x_modal_st():
 
 
 def profile_x_modal_sc():
-
     from autoencodix.configs.xmodalix_config import XModalixConfig
     from autoencodix.configs.default_config import DataConfig, DataInfo, DataCase
     from autoencodix.modeling._imgfast_architecture import ImageVAEFastArchitecture
@@ -185,7 +183,7 @@ def profile_x_modal_sc():
 
     xmodalix_config = XModalixConfig(
         checkpoint_interval=100,
-        epochs=1,
+        epochs=EPOCHS,
         class_param="cell_type",
         beta=0.1,
         gamma=10,
@@ -229,14 +227,21 @@ def profile_x_modal_sc():
     del result
 
 
-if __name__ == "__main__":
-    print("Running XModalix TCGA with Uhler architecture, key: 'XM-StArch_TCGA")
-    profile_x_modal_st()
+def run_and_time(fn, label):
+    start = time.perf_counter()
+    fn()
+    end = time.perf_counter()
+    elapsed = end - start
+    print(f"{label} completed in {elapsed:.3f} seconds")
 
-    # TODO add runs with large single cell data
-    # TODO add run with fast image architecture
+
+if __name__ == "__main__":
+    print("Running XModalix TCGA with Uhler architecture, key: XM-StArch_TCGA")
+    run_and_time(profile_x_modal_st, "XM-StArch_TCGA")
+
     print("Running XModalix TCGA with fast image architecture, key: XM_FastArch_TCGA")
-    profile_x_modal_fst()
+    run_and_time(profile_x_modal_fst, "XM_FastArch_TCGA")
 
     print("Running XModalix profiling with two SC modalities, key: XM_SC_TCGA")
-    profile_x_modal_sc()
+    run_and_time(profile_x_modal_sc, "XM_SC_TCGA")
+    EPOCHS: int = int(sys.argv[1])
