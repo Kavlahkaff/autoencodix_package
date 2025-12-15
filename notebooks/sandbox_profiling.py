@@ -236,6 +236,8 @@ def run_and_time(fn, label):
 
 
 if __name__ == "__main__":
+    
+    EPOCHS: int = int(sys.argv[1])
     print("Running XModalix TCGA with Uhler architecture, key: XM-StArch_TCGA")
     run_and_time(profile_x_modal_st, "XM-StArch_TCGA")
 
@@ -244,4 +246,3 @@ if __name__ == "__main__":
 
     print("Running XModalix profiling with two SC modalities, key: XM_SC_TCGA")
     run_and_time(profile_x_modal_sc, "XM_SC_TCGA")
-    EPOCHS: int = int(sys.argv[1])
