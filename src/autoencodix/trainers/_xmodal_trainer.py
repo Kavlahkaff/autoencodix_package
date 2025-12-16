@@ -482,7 +482,9 @@ class XModalTrainer(BaseTrainer):
             self._is_checkpoint_epoch = self._should_checkpoint(epoch=epoch)
             self._fabric.print(f"--- Epoch {epoch + 1}/{self._config.epochs} ---")
             if epoch == 0 and self._config.profiling:
+                print("Profiling enabled for epoch 0")
                 self._train_one_epoch_with_profiling()
+                continue
             train_epoch_dynamics, train_sub_losses, n_samples_train = (
                 self._train_one_epoch()
             )

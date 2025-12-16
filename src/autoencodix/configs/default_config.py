@@ -257,7 +257,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=0.001, gt=0, description="Learning rate for optimization"
     )
     pin_memory: bool = Field(
-        default=True, description="Pin memory for faster data transfer"
+        default=False, description="Pin memory for faster data transfer"
     )
     batch_size: int = Field(
         default=32,
