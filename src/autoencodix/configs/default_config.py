@@ -256,6 +256,9 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     learning_rate: float = Field(
         default=0.001, gt=0, description="Learning rate for optimization"
     )
+    compile_model: bool = Field(
+        default=False, description="If set to True we compile the model with torch.compile"
+    )
     pin_memory: bool = Field(
         default=False, description="Pin memory for faster data transfer"
     )

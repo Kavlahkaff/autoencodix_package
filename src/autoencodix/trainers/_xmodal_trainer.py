@@ -212,6 +212,7 @@ class XModalTrainer(BaseTrainer):
             if (
                 Version(torch.__version__) >= Version("2.0")
                 and torch.cuda.is_available()
+                and self._config.compile_model
             ):
                 model = torch.compile(model)
             optimizer = torch.optim.AdamW(
