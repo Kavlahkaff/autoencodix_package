@@ -141,6 +141,7 @@ class XModalTrainer(BaseTrainer):
             dynamics["model"], dynamics["optim"] = self._fabric.setup(
                 dynamics["model"], dynamics["optim"]
             )
+            dynamics["model"].mark_forward_method("decode")
 
     def _init_loaders(self):
         """Initializes DataLoaders with smart sampler selection based on pairing."""
@@ -211,6 +212,7 @@ class XModalTrainer(BaseTrainer):
             if (
                 Version(torch.__version__) >= Version("2.0")
                 and torch.cuda.is_available()
+                and self._config.compile_model
             ):
                 model = torch.compile(model)
             optimizer = torch.optim.AdamW(
@@ -481,7 +483,9 @@ class XModalTrainer(BaseTrainer):
             self._is_checkpoint_epoch = self._should_checkpoint(epoch=epoch)
             self._fabric.print(f"--- Epoch {epoch + 1}/{self._config.epochs} ---")
             if epoch == 0 and self._config.profiling:
+                print("Profiling enabled for epoch 0")
                 self._train_one_epoch_with_profiling()
+                continue
             train_epoch_dynamics, train_sub_losses, n_samples_train = (
                 self._train_one_epoch()
             )
@@ -891,7 +895,9 @@ class XModalTrainer(BaseTrainer):
                 active=3,  # Profile 3 batches
                 repeat=1,  # Do this once
             ),
-            on_trace_ready=torch.profiler.tensorboard_trace_handler("./profiler_logs"),
+            on_trace_ready=torch.profiler.tensorboard_trace_handler(
+                "./profiler_logs", worker_name=self._config.profile_logs
+            ),
         ) as prof:
             train_iter = iter(self._trainloader)
             for batch_idx, batch in enumerate(self._trainloader):
@@ -965,3 +971,36 @@ class XModalTrainer(BaseTrainer):
         print("PROFILER SUMMARY - Top Operations by CUDA Time")
         print("=" * 80)
         print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=20))
+
+        # --- Write profiler summary to CSV ---
+
+        import csv
+        from pathlib import Path
+
+        csv_path = Path(f"./profiler_logs/{self._config.profile_logs}.csv")
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with csv_path.open(mode="w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(
+                [
+                    "name",
+                    "cpu_timecuda_timecpu_memory_usage",
+                    "cuda_memory_usage",
+                    "input_shapes",
+                    "calls",
+                ]
+            )
+
+            for evt in prof.key_averages():
+                writer.writerow(
+                    [
+                        evt.key,
+                        evt.cpu_time,
+                        evt.cuda_time,
+                        evt.cpu_memory_usage,
+                        evt.cuda_memory_usage,
+                        str(evt.input_shapes),
+                        evt.count,
+                    ]
+                )

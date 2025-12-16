@@ -107,6 +107,7 @@ class BaseTrainer(abc.ABC):
             Version(torch.__version__) >= Version("2.0")
             and torch.cuda.is_available()
             and old_model is None
+            and self._config.compile_model
         ):  # dont compile twice
             self._model = torch.compile(self._model)
 
