@@ -236,7 +236,7 @@ def run_and_time(fn, label):
 
 
 if __name__ == "__main__":
-    
+
     EPOCHS: int = int(sys.argv[1])
     print("Running XModalix TCGA with Uhler architecture, key: XM-StArch_TCGA")
     run_and_time(profile_x_modal_st, "XM-StArch_TCGA")
