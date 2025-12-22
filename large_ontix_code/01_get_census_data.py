@@ -77,7 +77,7 @@ if step_from_cli == "step2":
 
 	gene_names = set()
 	for file in tsv_files:
-		df = pd.read_csv(file, sep='\t', usecols=[0])
+		df = pd.read_csv(file, sep='\t', usecols=[0], header=None)
 		gene_names.update(df.iloc[:, 0].dropna().unique())
 
 	print(f"Total unique gene names: {len(gene_names)}")

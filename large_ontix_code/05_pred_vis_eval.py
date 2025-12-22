@@ -3,8 +3,8 @@
 import os
 import sys
 
-data_final_folder = "./data/large_sc_data/"
-results_folder = "./results/large_ontix_save/"
+data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
+results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/"
 
 ont_from_cli = sys.argv[1]  # "chatgpt_ontology__", "custom_ontology__"
 
@@ -48,7 +48,7 @@ loaded_ontix.visualizer.show_latent_space(
 	split='test',
 	n_downsample=10000)
 # Heatmap representations of latent space
-params_heatmap = ["cell_type","tissue_general", "development_stage", "sex", "disease"]
+params_heatmap = ["tissue_general", "development_stage", "sex", "disease"]
 loaded_ontix.visualizer.show_latent_space(
 	result=loaded_ontix.result,
 	plot_type='Clustermap',

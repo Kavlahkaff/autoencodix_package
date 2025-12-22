@@ -57,12 +57,18 @@ ont_list=("Dim24_GPT-5.1_ontology__" "Dim10_GPT-5.1_ontology__" "Dim24_Mistral-L
 
 ### Final training of large Ontix model ### -> one GPU required
 # Loop over ontologies for final training -> should be parallelized
-for ont in ${ont_list[@]}; do
-	tuning_file=large_ontix_${ont}tuning.pkl
-	python large_ontix_code/04_large_ontix_finaltraining.py $ont $tuning_file
-	# Visualize final model results
-	python large_ontix_code/05_pred_vis_eval.py $ont
-done
+# for ont in ${ont_list[@]}; do
+# 	tuning_file=large_ontix_${ont}tuning.pkl
+# 	python large_ontix_code/04_large_ontix_finaltraining.py $ont $tuning_file
+# 	# Visualize final model results
+# 	python large_ontix_code/05_pred_vis_eval.py $ont
+# done
 ## TODO upload final model results to Nextcloud for storage ##
 ###############################################
 
+time_for_all=2  # in hours
+
+for ont in ${ont_list[@]}; do
+	echo "Tuning for ontology: $ont"
+	echo "large_ontix_${ont}tuning.pkl"
+done

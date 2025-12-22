@@ -423,8 +423,11 @@ class GeneralTrainer(BaseTrainer):
         self._init_buffers(input_data=data)
         inference_loader = self._fabric.setup_dataloaders(inference_loader)  # type: ignore
         with self._fabric.autocast(), torch.inference_mode():
+            processed_samples = 0
             for idx, data, sample_ids in inference_loader:
                 model_output = model(data)
+                processed_samples += len(data)
+                print(f"Processed {processed_samples} / {self.n_test} samples", end="\r")
                 self._capture_dynamics(
                     model_output=model_output,
                     split="test",

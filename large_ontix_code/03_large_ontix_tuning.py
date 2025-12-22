@@ -9,8 +9,9 @@ from syne_tune.config_space import randint, uniform, loguniform
 from syne_tune.optimizer.baselines import CQR
 from syne_tune.experiments import load_experiment
 
-data_final_folder = "./data/large_sc_data/"
-results_folder = "./results/large_ontix_save/"
+# data_final_folder = "./data/large_sc_data/"
+data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
+results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/"
 # Create results_folder if it doesn't exist
 if not os.path.exists(results_folder):
 	os.makedirs(results_folder)
@@ -21,8 +22,8 @@ n_workers = int(sys.argv[3])  # number of parallel workers for tuning
 
 metric = "ml_performance" # "ml_performance" or "recon_loss"
 
-# tasks = ["cell_type", "tissue", "development_stage", "sex", "disease"] 
-tasks = ["tissue_general", "sex", "disease"] # For testing
+tasks = ["cell_type", "tissue", "development_stage", "sex", "disease"] 
+# tasks = ["tissue_general", "sex", "disease"] # For testing
 
 
 file_processed = os.path.join(data_final_folder, "census-acxcontainer_tune.pkl")
@@ -50,13 +51,31 @@ def syne_trainer(
 	## Load Dataset Container from pickle with already preprocessed data
 	import os
 	import pickle
+	import pandas as pd
 	import sklearn
 	from sklearn import linear_model
 	import autoencodix as acx
 	from autoencodix.configs.ontix_config import OntixConfig
 	from syne_tune import Reporter
 
-	llm_ontology_folder = "./data/llm_ontologies/final_ontologies/"
+	def keep_features_from_acxcontainer(acx_container, feature_ids_to_keep):
+		import numpy as np
+
+		for split in ['train', 'valid', 'test']:
+			if getattr(acx_container, split) is None:
+				continue
+
+			dataset = getattr(acx_container, split)
+			feature_id_array = np.array(dataset.feature_ids)
+			keep_indices = [i for i, fid in enumerate(feature_id_array) if fid in feature_ids_to_keep]
+
+			dataset.data = dataset.data[:, keep_indices]
+			dataset.feature_ids = [dataset.feature_ids[i] for i in keep_indices]
+			setattr(acx_container, split, dataset)
+
+		return acx_container
+
+	llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
 	
 	file_pkl = data_path
 
@@ -76,6 +95,7 @@ def syne_trainer(
 		beta= beta,
 		learning_rate= learning_rate,
 		n_layers= n_layers,
+		save_memory=True,
 	)
 
 
@@ -84,6 +104,11 @@ def syne_trainer(
 		os.path.join(llm_ontology_folder, f"{ontology_name}ensembl_level1.tsv"),
 		os.path.join(llm_ontology_folder, f"{ontology_name}ensembl_level2.tsv"),
 		]
+
+	ont_lvl2 = pd.read_csv(ont_files[1], sep='\t', usecols=[0], header=None)
+	ont_lvl2.columns = ['feature_id']
+
+	acx_container = keep_features_from_acxcontainer(acx_container, ont_lvl2['feature_id'].values)
 
 	ontix = acx.Ontix(
 		data=acx_container,
@@ -115,7 +140,7 @@ def syne_trainer(
 		metric_regression = own_metric_regression, 
 		reference_methods = [], # No reference methods for tuning
 		split_type = "use-split",
-		n_downsample = int(acx_container.train.data.shape[0]*0.1), # Use a subset of the data for faster evaluation
+		n_downsample = int(acx_container.train.data.shape[0]*0.5), # Use a subset of the data for faster evaluation
 	)
 
 	avg_mltask_performance = ontix.result.embedding_evaluation.loc[
@@ -131,7 +156,7 @@ def syne_trainer(
 
 
 # Hyperparameter configuration 
-epoch = 5  # For testing, reduce number of epochs
+epoch = 250  # For testing, reduce number of epochs
 config_space = {
 	## Fixed params
 	"epochs": epoch,
@@ -141,13 +166,13 @@ config_space = {
 	"ontology_name": ont_from_cli,
 	"tasks": "$".join(tasks),
 	## Tunable params
-	"batch_size": randint(128, 4096),
+	"batch_size": randint(64, 4096),
 	"drop_p": uniform(0.0, 0.9),
-	"enc_factor": randint(1, 5),
+	"enc_factor": uniform(1, 3),
 	"weight_decay": loguniform(1e-5, 1e-1),
 	"beta": loguniform(1e-5, 10),
 	"learning_rate": loguniform(1e-5, 1e-1),
-	"n_layers": randint(2, 5),
+	"n_layers": randint(5, 5),
 }
 
 # Define whether to minimize or maximize the metric

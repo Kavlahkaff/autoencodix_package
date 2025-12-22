@@ -447,10 +447,14 @@ class Loader:
         Returns:
             The loaded BasePipeline object, or None on error.
         """
-        with zipfile.ZipFile(
-            os.path.join(self.folder, f"{self.file_stem}.zip"), "r"
-        ) as archive:
-            archive.extractall()
+        try:
+            with zipfile.ZipFile(
+                os.path.join(self.folder, f"{self.file_stem}.zip"), "r"
+            ) as archive:
+                archive.extractall()
+        except:
+            print(f"Error extracting zip file at {self.file_path}")
+            print("Attempting to load without extraction...")
 
         loaded_obj = self._load_pipeline_object()
         if loaded_obj is None:

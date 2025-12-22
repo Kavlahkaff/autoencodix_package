@@ -379,5 +379,16 @@ class Result:
             reconstructions = reconstructions[modality]
             ids = ids[modality]
 
-        cols = self.datasets.train.feature_ids
+        if self.new_datasets is not None:
+            datasets = self.new_datasets
+
+        # cols = self.datasets.train.feature_ids
+        if split == "train" and datasets is not None and datasets.train is not None:
+            cols = datasets.train.feature_ids
+        elif split == "valid" and datasets is not None and datasets.valid is not None:
+            cols = datasets.valid.feature_ids
+        elif split == "test" and datasets is not None and datasets.test is not None:
+            cols = datasets.test.feature_ids
+        else:
+            cols = [f"Feature_{i}" for i in range(reconstructions.shape[1])]
         return pd.DataFrame(reconstructions, index=ids, columns=cols)

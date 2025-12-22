@@ -5,9 +5,9 @@ import pickle
 import autoencodix as acx
 from autoencodix.configs.ontix_config import OntixConfig
 
-data_final_folder = "./data/large_sc_data/"
-llm_ontology_folder = "./data/llm_ontologies/final_ontologies/"
-results_folder = "./results/large_ontix_save/"
+data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
+llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
+results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/"
 
 ont_from_cli = sys.argv[1]  # "chatgpt_ontology__", "custom_ontology__"
 tuning_experiment_file = sys.argv[2]  # Name of tuning experiment pickle file
@@ -32,7 +32,7 @@ with open(file_processed, "rb") as f:
 scconfig = OntixConfig(
 	## Fixed params
 	epochs=best_hyperparams['config_epochs'],
-	# epochs=5, # Reduce for testing
+	# epochs=3, # Reduce for testing
 	checkpoint_interval= best_hyperparams['config_checkpoint_interval'],
 	loss_reduction= best_hyperparams['config_loss_reduction'],
 	## Tunable params
