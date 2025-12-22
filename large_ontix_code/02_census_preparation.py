@@ -3,13 +3,16 @@ import os
 import sys
 import scanpy
 import anndata
-data_folder = "./data/census_chunks/"
-data_final_folder = "./data/large_sc_data/"
+# data_folder = "./data/census_chunks/"
+data_folder = "/data/horse/ws/jaew523d-large_ontix_project/census_chunks/"
+data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
+
 # create data_final_folder if it doesn't exist
 if not os.path.exists(data_final_folder):
 	os.makedirs(data_final_folder)
-llm_ontology_folder = "./data/llm_ontologies/"
-mock_config_file = "./data/large-ontix.yaml"
+# llm_ontology_folder = "./data/llm_ontologies/final_ontologies/"
+llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
+mock_config_file = "/data/horse/ws/jaew523d-large_ontix_project/large-ontix.yaml"
 
 step_from_cli = sys.argv[1]  # "step1", "step2", "..."
 fraction_for_tuning = 0.05

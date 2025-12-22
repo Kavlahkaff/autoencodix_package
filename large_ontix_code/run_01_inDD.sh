@@ -15,6 +15,7 @@ sbatch <<EOT
 #SBATCH --cpus-per-task=8
 #SBATCH --mem-per-cpu=4096
 #SBATCH --time=1:00:00
+#SBATCH --account=p_scads_autoencodix
 
 source .venv/bin/activate
 # Define chunks
