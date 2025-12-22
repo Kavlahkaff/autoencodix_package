@@ -118,6 +118,8 @@ def syne_trainer(
 
 	ontix.run()
 
+	ontix.predict(data=acx_container) # After saving memory, need to re-predict to have results on all splits
+
 	## Embedding Evaluation
 	sklearn.set_config(enable_metadata_routing=True)
 

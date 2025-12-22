@@ -87,6 +87,10 @@ class GeneralEvaluator(BaseEvaluator):
         if datasets is None:
             datasets = DatasetContainer()
 
+        if bool(result.new_datasets.train):
+            datasets.train = result.new_datasets.train
+        if bool(result.new_datasets.valid):
+            datasets.valid = result.new_datasets.valid
         if bool(result.new_datasets.test):
             datasets.test = result.new_datasets.test
 
