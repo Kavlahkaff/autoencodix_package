@@ -11,7 +11,9 @@ from syne_tune.experiments import load_experiment
 
 # data_final_folder = "./data/large_sc_data/"
 data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
-results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/"
+results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/testing/"
+# results_folder = "./results/large_ontix_save/testing/"
+
 # Create results_folder if it doesn't exist
 if not os.path.exists(results_folder):
 	os.makedirs(results_folder)
@@ -76,6 +78,7 @@ def syne_trainer(
 		return acx_container
 
 	llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
+	# llm_ontology_folder = "./data/llm_ontologies/final_ontologies/"
 	
 	file_pkl = data_path
 
@@ -95,7 +98,8 @@ def syne_trainer(
 		beta= beta,
 		learning_rate= learning_rate,
 		n_layers= n_layers,
-		save_memory=True,
+		save_memory=False,
+		save_vram=True,  # Enable VRAM saving
 	)
 
 
@@ -118,7 +122,6 @@ def syne_trainer(
 
 	ontix.run()
 
-	ontix.predict(data=acx_container) # After saving memory, need to re-predict to have results on all splits
 
 	## Embedding Evaluation
 	sklearn.set_config(enable_metadata_routing=True)
@@ -158,7 +161,7 @@ def syne_trainer(
 
 
 # Hyperparameter configuration 
-epoch = 250  # For testing, reduce number of epochs
+epoch = 5  # For testing, reduce number of epochs
 config_space = {
 	## Fixed params
 	"epochs": epoch,

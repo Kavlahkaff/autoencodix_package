@@ -40,17 +40,17 @@ source .venv/bin/activate
 
 ### Tuning of large Ontix model ### -> multiple GPU required
 # Define list of ontologies
-ont_list=("Dim24_GPT-5.1_ontology__" "Dim10_GPT-5.1_ontology__" "Dim24_Mistral-Large-3_ontology__" "Dim10_Mistral-Large-3_ontology__" "Dim24_Gemini3ProPreview_ontology__" "Dim10_Gemini3ProPreview_ontology__")
-# ont_list=("Dim24_GPT-5-Thinking_mini_ontology__" "Dim10_GPT-5-Thinking_mini_ontology__")
+# ont_list=("Dim24_GPT-5.1_ontology__" "Dim10_GPT-5.1_ontology__" "Dim24_Mistral-Large-3_ontology__" "Dim10_Mistral-Large-3_ontology__" "Dim24_Gemini3ProPreview_ontology__" "Dim10_Gemini3ProPreview_ontology__")
+ont_list=("Dim24_GPT-5.1_ontology__")
 
-# n_workers=1
-# time_for_tuning=0.1  # in hours
-# # Loop over ontologies for tuning -> should be parallelized
-# for ont in ${ont_list[@]}; do
-# 	echo "Tuning for ontology: $ont"
-# 	python large_ontix_code/03_large_ontix_tuning.py $ont $time_for_tuning $n_workers
+n_workers=1
+time_for_tuning=0.2  # in hours
+# Loop over ontologies for tuning -> should be parallelized
+for ont in ${ont_list[@]}; do
+	echo "Tuning for ontology: $ont"
+	python large_ontix_code/03_large_ontix_tuning.py $ont $time_for_tuning $n_workers
 ## TODO upload tuning results to Nextcloud for storage ##
-# done
+done
 # ###############################################
 
 
@@ -66,9 +66,9 @@ ont_list=("Dim24_GPT-5.1_ontology__" "Dim10_GPT-5.1_ontology__" "Dim24_Mistral-L
 ## TODO upload final model results to Nextcloud for storage ##
 ###############################################
 
-time_for_all=2  # in hours
+# time_for_all=2  # in hours
 
-for ont in ${ont_list[@]}; do
-	echo "Tuning for ontology: $ont"
-	echo "large_ontix_${ont}tuning.pkl"
-done
+# for ont in ${ont_list[@]}; do
+# 	echo "Tuning for ontology: $ont"
+# 	echo "large_ontix_${ont}tuning.pkl"
+# done
