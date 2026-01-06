@@ -67,6 +67,7 @@ class GeneralVisualizer(BaseVisualizer):
             "2D-scatter", "Ridgeline", "Coverage-Correlation"
         ] = "2D-scatter",
         labels: Optional[Union[list, pd.Series, None]] = None,
+        focus_labels: Optional[Union[list, None]] = None,
         param: Optional[Union[list, str]] = None,
         epoch: Optional[Union[int, None]] = None,
         split: str = "all",
@@ -79,6 +80,7 @@ class GeneralVisualizer(BaseVisualizer):
             result: The result object containing latent spaces and losses.
             plot_type: The type of plot to generate. Options are "2D-scatter", "Ridgeline", and "Coverage-Correlation". Default is "2D-scatter".
             labels: List of labels for the data points in the latent space. Default is None.
+            focus_labels: List of labels which should be considered for coloring. All other labels are set to 'other'. Defaults to None where all labels are considered.
             param: List of parameters provided and stored as metadata. Strings must match column names. If not a list, string "all" is expected for convenient way to make plots for all parameters available. Default is None where no colored labels are plotted.
             epoch: The epoch number to visualize. If None, the last epoch is inferred from the losses. Default is None.
             split: The data split to visualize. Options are "train", "valid", "test", and "all". Default is "all".
@@ -331,40 +333,48 @@ class GeneralVisualizer(BaseVisualizer):
                     else:
                         embedding = df_latent
 
-                    self.plots["2D-scatter"][epoch][split][p] = self._plot_2D(
+                    fig = self._plot_2D(
                         embedding=embedding,
                         labels=labels,
+                        focus_labels=focus_labels,
                         param=p,
                         layer=f"2D latent space (epoch {epoch+1})",  # we start counting epochs at 0, so add 1 for display
                         figsize=(12, 8),
                         center=True,
                     )
-
-                    fig = self.plots["2D-scatter"][epoch][split][p]
+                    if focus_labels is None:
+                        self.plots["2D-scatter"][epoch][split][p] = fig
+                    else:
+                        focus_group = "group_" + str(len(self.plots["2D-scatter"][epoch][split][p+"_focus"].keys())+1)
+                        self.plots["2D-scatter"][epoch][split][p+"_focus"][focus_group] = fig
                     show_figure(fig)
                     plt.show()
 
                 if plot_type == "Ridgeline":
                     ## Make ridgeline plot
 
-                    self.plots["Ridgeline"][epoch][split][p] = self._plot_latent_ridge(
-                        lat_space=df_latent, labels=labels, param=p
+                    fig = self._plot_latent_ridge(
+                        lat_space=df_latent, labels=labels, focus_labels=focus_labels, param=p
                     )
-
-                    fig = self.plots["Ridgeline"][epoch][split][p].figure
-                    show_figure(fig)
+                    if focus_labels is None:
+                        self.plots["Ridgeline"][epoch][split][p] = fig
+                    else:
+                        focus_group = "group_" + str(len(self.plots["Ridgeline"][epoch][split][p+"_focus"].keys())+1)
+                        self.plots["Ridgeline"][epoch][split][p+"_focus"][focus_group] = fig
+                    show_figure(fig.figure)
                     plt.show()
 
                 if plot_type == "Clustermap":
                     ## Make clustermap plot
 
-                    self.plots["Clustermap"][epoch][split][p] = (
-                        self._plot_latent_clustermap(
-                            lat_space=df_latent, labels=labels, param=p
+                    fig = self._plot_latent_clustermap(
+                            lat_space=df_latent, labels=labels, focus_labels=focus_labels, param=p
                         )
-                    )
-
-                    fig = self.plots["Clustermap"][epoch][split][p]
+                    if focus_labels is None:
+                        self.plots["Clustermap"][epoch][split][p] = fig
+                    else:
+                        focus_group = "group_" + str(len(self.plots["Clustermap"][epoch][split][p+"_focus"].keys())+1)
+                        self.plots["Clustermap"][epoch][split][p+"_focus"][focus_group] = fig
                     show_figure(fig)
                     plt.show()
 
@@ -392,6 +402,7 @@ class GeneralVisualizer(BaseVisualizer):
     def _plot_2D(
         embedding: pd.DataFrame,
         labels: list,
+        focus_labels: Optional[Union[list, None]] = None,
         param: Optional[Union[str, None]] = None,
         layer: str = "latent space",
         figsize: tuple = (24, 15),
@@ -407,6 +418,7 @@ class GeneralVisualizer(BaseVisualizer):
         Args:
             embedding: DataFrame containing the 2D embedding coordinates.
             labels: List of labels corresponding to each point in the embedding.
+            focus_labels: List of labels which should be considered for coloring. All other labels are set to 'other'. Defaults to None where all labels are considered.
             param: Title for the legend. Defaults to None.
             layer: Title for the plot. Defaults to "latent space".
             figsize: Size of the figure. Defaults to (24, 15).
@@ -460,6 +472,11 @@ class GeneralVisualizer(BaseVisualizer):
             ]
         elif len(labels) > embedding.shape[0]:
             labels = list(set(labels))
+
+        if focus_labels is not None:
+            labels = [
+                label if label in focus_labels else "other" for label in labels
+            ]
 
         if numeric:
             ax2 = sns.scatterplot(
@@ -540,6 +557,7 @@ class GeneralVisualizer(BaseVisualizer):
     def _plot_latent_clustermap(
         lat_space: pd.DataFrame,
         labels: Optional[Union[list, pd.Series, None]] = None,
+        focus_labels: Optional[Union[list, None]] = None,
         param: Optional[Union[str, None]] = None,
     ) -> matplotlib.figure.Figure:
         """Creates a clustermap of the latent space dimension where each row shows the intensity of a latent dimension and columns are clustered.
@@ -547,10 +565,16 @@ class GeneralVisualizer(BaseVisualizer):
         Args:
             lat_space: DataFrame containing the latent space intensities for samples (rows) and latent dimensions (columns)
             labels: List of labels for each sample. If None, all samples are considered as one group.
+            focus_labels: List of labels which should be considered for coloring. All other labels are set to 'other'. Defaults to None where all labels are considered.
             param: Clinical parameter to create groupings and coloring of ridges. Must be a column name (str) of clin_data
         Returns:
             fig: Figure object containing the clustermap
         """
+        if focus_labels is not None:
+            labels = [
+                label if label in focus_labels else "other" for label in labels
+            ]
+
         lat_space[param] = labels
 
         cluster_figure = sns.clustermap(
@@ -572,6 +596,7 @@ class GeneralVisualizer(BaseVisualizer):
     def _plot_latent_ridge(
         lat_space: pd.DataFrame,
         labels: Optional[Union[list, pd.Series, None]] = None,
+        focus_labels: Optional[Union[list, None]] = None,
         param: Optional[Union[str, None]] = None,
     ) -> sns.FacetGrid:
         """Creates a ridge line plot of latent space dimension where each row shows the density of a latent dimension and groups (ridges).
@@ -579,6 +604,7 @@ class GeneralVisualizer(BaseVisualizer):
         Args:
             lat_space: DataFrame containing the latent space intensities for samples (rows) and latent dimensions (columns)
             labels: List of labels for each sample. If None, all samples are considered as one group.
+            focus_labels: List of labels which should be considered for coloring. All other labels are set to 'other'. Defaults to None where all labels are considered.
             param: Clinical parameter to create groupings and coloring of ridges. Must be a column name (str) of clin_data
         Returns:
             g: FacetGrid object containing the ridge line plot
@@ -609,6 +635,11 @@ class GeneralVisualizer(BaseVisualizer):
             else:
                 labels = [str(x) for x in labels]
 
+        if focus_labels is not None:
+            labels = [
+                label if label in focus_labels else "other" for label in labels
+            ]
+        
         df[param] = len(lat_space.columns) * labels  # type: ignore
 
         exclude_missing_info = (df[param] == "unknown") | (df[param] == "nan")

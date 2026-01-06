@@ -38,7 +38,7 @@ loaded_ontix.visualizer.show_latent_space(
 	plot_type='2D-scatter',
 	param=params_umap,
 	split='test',
-	n_downsample=10000)
+	n_downsample=20000)
 # Ridgeline plots of latent space
 params_ridge = ["sex","healthy"]
 loaded_ontix.visualizer.show_latent_space(
@@ -46,7 +46,7 @@ loaded_ontix.visualizer.show_latent_space(
 	plot_type='Ridgeline',
 	param=params_ridge,
 	split='test',
-	n_downsample=10000)
+	n_downsample=20000)
 # Heatmap representations of latent space
 params_heatmap = ["tissue_general", "development_stage", "sex", "disease"]
 loaded_ontix.visualizer.show_latent_space(
@@ -54,7 +54,107 @@ loaded_ontix.visualizer.show_latent_space(
 	plot_type='Clustermap',
 	param=params_heatmap,
 	split='test',
-	n_downsample=10000)
+	n_downsample=20000)
+
+## Focused plots for specific metadata values
+# UMAP for disease "cystic fibrosis" vs. "COVID-19" vs. "healthy" vs. others
+params_umap_disease = ["disease"]
+loaded_ontix.visualizer.show_latent_space(
+	result=loaded_ontix.result,
+	plot_type='2D-scatter',
+	param=params_umap_disease,
+	focus_labels=["cystic fibrosis", "COVID-19", "healthy"],
+	split='test',
+	n_downsample=20000)
+# UMAP for tissue_general "lung" vs. "brain" vs. "liver" vs. others
+params_umap_tissue = ["tissue_general"]
+loaded_ontix.visualizer.show_latent_space(
+	result=loaded_ontix.result,
+	plot_type='2D-scatter',
+	param=params_umap_tissue,
+	focus_labels=["lung", "brain", "liver"],
+	split='test',
+	n_downsample=20000)
+
+# Ridgeline for disease "cystic fibrosis" vs. "COVID-19" vs. "healthy" vs. others
+params_ridge_disease = ["disease"]
+loaded_ontix.visualizer.show_latent_space(
+	result=loaded_ontix.result,
+	plot_type='Ridgeline',
+	param=params_ridge_disease,
+	focus_labels=["cystic fibrosis", "COVID-19", "healthy"],
+	split='test',
+	n_downsample=20000)
+# Ridgeline for tissue_general "lung" vs. "brain" vs. "liver" vs. others
+params_ridge_tissue = ["tissue_general"]
+loaded_ontix.visualizer.show_latent_space(
+	result=loaded_ontix.result,
+	plot_type='Ridgeline',
+	param=params_ridge_tissue,
+	focus_labels=["lung", "brain", "liver"],
+	split='test',
+	n_downsample=20000)
+
+# Ridgeline for cell_type "alternatively activated macrophage" vs. "inflammatory macrophage" vs. others
+params_ridge_celltype = ["cell_type"]
+loaded_ontix.visualizer.show_latent_space(
+	result=loaded_ontix.result,
+	plot_type='Ridgeline',
+	param=params_ridge_celltype,
+	focus_labels=["alternatively activated macrophage", "inflammatory macrophage"],
+	split='test',
+	n_downsample=20000)
+
+# Ridgeline for cell_type "CD4-positive helper T cell" vs. "CD8-positive, alpha-beta cytotoxic T cell" vs. "regulatory T cell" vs. others
+params_ridge_celltype2 = ["cell_type"]
+loaded_ontix.visualizer.show_latent_space(
+	result=loaded_ontix.result,
+	plot_type='Ridgeline',
+	param=params_ridge_celltype2,
+	focus_labels=["CD4-positive helper T cell", "CD8-positive, alpha-beta cytotoxic T cell", "regulatory T cell"],
+	split='test',
+	n_downsample=20000)
+
+# Ridgeline for cell_type "type I muscle cell" vs. "type II muscle cell" vs. others
+params_ridge_celltype3 = ["cell_type"]
+loaded_ontix.visualizer.show_latent_space(
+	result=loaded_ontix.result,
+	plot_type='Ridgeline',
+	param=params_ridge_celltype3,
+	focus_labels=["type I muscle cell", "type II muscle cell"],
+	split='test',
+	n_downsample=20000)
+
+
+# Clustermap for disease "cystic fibrosis" vs. "COVID-19" vs. "healthy" vs. others
+params_heatmap_disease = ["disease"]
+loaded_ontix.visualizer.show_latent_space(
+	result=loaded_ontix.result,
+	plot_type='Clustermap',
+	param=params_heatmap_disease,
+	focus_labels=["cystic fibrosis", "COVID-19", "healthy"],
+	split='test',
+	n_downsample=20000)
+
+# Clustermap for tissue_general "lung" vs. "brain" vs. "liver" vs. others
+params_heatmap_tissue = ["tissue_general"]
+loaded_ontix.visualizer.show_latent_space(
+	result=loaded_ontix.result,
+	plot_type='Clustermap',
+	param=params_heatmap_tissue,
+	focus_labels=["lung", "brain", "liver"],
+	split='test',
+	n_downsample=20000)
+
+# Clustermap for cell_type "alternatively activated macrophage" vs. "inflammatory macrophage" vs. "CD4-positive helper T cell" vs. "CD8-positive, alpha-beta cytotoxic T cell" vs. "regulatory T cell" vs. "type I muscle cell" vs. "type II muscle cell" vs. others
+params_heatmap_celltype = ["cell_type"]
+loaded_ontix.visualizer.show_latent_space(
+	result=loaded_ontix.result,
+	plot_type='Clustermap',
+	param=params_heatmap_celltype,
+	focus_labels=["alternatively activated macrophage", "inflammatory macrophage", "CD4-positive helper T cell", "CD8-positive, alpha-beta cytotoxic T cell", "regulatory T cell", "type I muscle cell", "type II muscle cell"],
+	split='test',
+	n_downsample=20000)
 
 
 #### Step 3 - Evaluate embeddings ####
