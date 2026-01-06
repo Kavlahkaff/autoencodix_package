@@ -321,10 +321,13 @@ class Saver:
         with zipfile.ZipFile(
             os.path.join(self.folder, f"{self.file_stem}.zip"), "w"
         ) as archive:
-            archive.write(self.file_path)
-            archive.write(self.preprocessor_path)
+            arcname = self.file_name
+            archive.write(self.file_path , arcname=arcname)
+            arcname = f"{self.file_stem}_preprocessor.pkl"
+            archive.write(self.preprocessor_path, arcname=arcname)
             for model_state_path in self.model_state_paths:
-                archive.write(model_state_path)
+                arcname = f"{self.file_stem}_model.pth"
+                archive.write(model_state_path, arcname=arcname)
         os.remove(self.file_path)
         os.remove(self.preprocessor_path)
         for model_state_path in self.model_state_paths:
@@ -387,6 +390,8 @@ class Saver:
         for f in fields(obj):
             # we keep the adata_latent space as a "core result"
             if f.name == "adata_latent":
+                continue
+            if f.name == "losses" or f.name == "sub_losses": # Keep loss dynamics
                 continue
             if f.name == "model":
                 # we need to keep the instantiated class, so we can load the state dict
