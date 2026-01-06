@@ -11,7 +11,7 @@ from syne_tune.experiments import load_experiment
 
 # data_final_folder = "./data/large_sc_data/"
 data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
-results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/testing/"
+results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/second_run_e250/"
 # results_folder = "./results/large_ontix_save/testing/"
 
 # Create results_folder if it doesn't exist
@@ -161,7 +161,7 @@ def syne_trainer(
 
 
 # Hyperparameter configuration 
-epoch = 5  # For testing, reduce number of epochs
+epoch = 250  # For testing, reduce number of epochs
 config_space = {
 	## Fixed params
 	"epochs": epoch,

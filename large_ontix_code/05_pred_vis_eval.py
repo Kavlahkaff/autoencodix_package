@@ -4,7 +4,7 @@ import os
 import sys
 
 data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
-results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/"
+results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/first_run_e250/"
 
 ont_from_cli = sys.argv[1]  # "chatgpt_ontology__", "custom_ontology__"
 
