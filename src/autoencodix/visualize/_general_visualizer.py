@@ -667,11 +667,14 @@ class GeneralVisualizer(BaseVisualizer):
         else:
             cat_pal = sns.color_palette("tab10", n_colors=len(labels))
 
+        # Length of longest latent dim string for aspect ratio
+        len_longest_latent_dim = max([len(str(x)) for x in lat_space.columns])
+
         g = sns.FacetGrid(
             df[~exclude_missing_info],
             row="latent dim",
             hue=param,
-            aspect=12,
+            aspect=12+len_longest_latent_dim/4,
             height=0.8,
             xlim=(xmin.iloc[0], xmax.iloc[0]),
             palette=cat_pal,
