@@ -56,6 +56,12 @@ ont_lvl2.columns = ['feature_id']
 
 # acx_container = keep_features_from_acxcontainer(acx_container, ont_lvl2['feature_id'].values)
 
+# ## Downsample holdout set for faster prediction (optional)
+# acx_container.test.data = acx_container.test.data[:50000, :]
+# acx_container.test.sample_ids = acx_container.test.sample_ids[:50000]
+# acx_container.test.metadata = acx_container.test.metadata.loc[acx_container.test.sample_ids, :]
+# print(f"Holdout test set size after downsampling: {acx_container.test.data.shape[0]} samples.")
+
 print("Loading trained model ...")
 loaded_ontix = acx.Ontix.load(file_path=final_ontix_model_file)
 loaded_ontix._trainer._config.save_vram = True  # Enable memory saving for prediction on holdout set
@@ -196,6 +202,7 @@ result = loaded_ontix.predict(
 #### Step 3 - Evaluate embeddings ####
 import sklearn
 from sklearn import linear_model
+from sklearn.ensemble import RandomForestClassifier
 tasks = ["cell_type", "tissue_general", "development_stage", "sex", "disease"] 
 
 sklearn.set_config(enable_metadata_routing=True)
@@ -204,8 +211,9 @@ sklearn_ml_class = linear_model.LogisticRegression(
 							solver="sag",
 							n_jobs=-1,
 							class_weight="balanced",
-							max_iter=200,
+							max_iter=50,
 ) 
+
 sklearn_ml_regression = linear_model.LinearRegression() ## Unused, only classification tasks
 own_metric_class = 'roc_auc_ovo'  
 own_metric_regression = 'r2' 
@@ -217,9 +225,30 @@ loaded_ontix.evaluate(
 	metric_class = own_metric_class, 
 	metric_regression = own_metric_regression, 
 	reference_methods = ["PCA"], # No reference methods for tuning
+	split_type = "CV-2",
+	# n_downsample = int(acx_container.test.data.shape[0]*0.01), # Use a subset of the data for faster evaluation
+	n_downsample = None, # Use a subset of the data for faster evaluation
+	top_k_classes = 30, # Keep top 20 classes for classification tasks
+)
+
+# Test RandomForest as additional model for evaluation
+sklearn_ml_class = RandomForestClassifier(
+							n_estimators=50,
+							n_jobs=-1,
+							min_samples_split=100,
+)
+
+loaded_ontix.evaluate(
+	ml_model_class=sklearn_ml_class, 
+	ml_model_regression=sklearn_ml_regression, 
+	params= tasks,	
+	metric_class = own_metric_class, 
+	metric_regression = own_metric_regression, 
+	reference_methods = ["PCA"], # No reference methods for tuning
 	split_type = "CV-3",
-	n_downsample = int(acx_container.test.data.shape[0]*0.01), # Use a subset of the data for faster evaluation
-	# n_downsample = None, # Use a subset of the data for faster evaluation
+	# n_downsample = int(acx_container.test.data.shape[0]*0.01), # Use a subset of the data for faster evaluation
+	n_downsample = None, # Use a subset of the data for faster evaluation
+	top_k_classes = 30, # Keep top 20 classes for classification tasks
 )
 
 #### Step 4 - Save ####

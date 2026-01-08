@@ -896,6 +896,7 @@ class BasePipeline(abc.ABC):
             "use-split", "CV-5", "LOOC"
         ] = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
         n_downsample: Optional[int] = 10000,
+        top_k_classes: Optional[int] = 20,
     ) -> Result:
         """TODO"""
         if self.evaluator is None:
@@ -951,6 +952,7 @@ class BasePipeline(abc.ABC):
             reference_methods=reference_methods,
             split_type=split_type,
             n_downsample=n_downsample,
+            top_k_classes=top_k_classes,
         )
 
         _: Any = self.visualizer._plot_evaluation(result=self.result)

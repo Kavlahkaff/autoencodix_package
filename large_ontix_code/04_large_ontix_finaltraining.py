@@ -5,9 +5,26 @@ import pickle
 import autoencodix as acx
 from autoencodix.configs.ontix_config import OntixConfig
 
+def keep_features_from_acxcontainer(acx_container, feature_ids_to_keep):
+	import numpy as np
+
+	for split in ['train', 'valid', 'test']:
+		if getattr(acx_container, split) is None:
+			continue
+
+		dataset = getattr(acx_container, split)
+		feature_id_array = np.array(dataset.feature_ids)
+		keep_indices = [i for i, fid in enumerate(feature_id_array) if fid in feature_ids_to_keep]
+
+		dataset.data = dataset.data[:, keep_indices]
+		dataset.feature_ids = [dataset.feature_ids[i] for i in keep_indices]
+		setattr(acx_container, split, dataset)
+
+	return acx_container
+
 data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
 llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
-results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/"
+results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/second_run_e250"
 
 ont_from_cli = sys.argv[1]  # "chatgpt_ontology__", "custom_ontology__"
 tuning_experiment_file = sys.argv[2]  # Name of tuning experiment pickle file
@@ -29,6 +46,12 @@ best_hyperparams = tuning_experiment.best_config()
 with open(file_processed, "rb") as f:
 	acx_container = pickle.load(f)
 
+### Step 3 - Restrict to features in ontology level 2 ###
+ont_lvl2 = pd.read_csv(ont_files[1], sep='\t', usecols=[0], header=None)
+ont_lvl2.columns = ['feature_id']
+
+acx_container = keep_features_from_acxcontainer(acx_container, ont_lvl2['feature_id'].values)
+
 scconfig = OntixConfig(
 	## Fixed params
 	epochs=best_hyperparams['config_epochs'],
@@ -43,10 +66,11 @@ scconfig = OntixConfig(
 	beta= best_hyperparams['config_beta'],
 	learning_rate= best_hyperparams['config_learning_rate'],
 	n_layers= best_hyperparams['config_n_layers'],
+	save_vram=True,
 	save_memory=True,
 )
 
-#### Step 3 - Final training #####
+#### Step 4 - Final training #####
 ontix = acx.Ontix(
 	data=acx_container,
 	ontologies=ont_files,

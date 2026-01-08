@@ -46,6 +46,7 @@ class GeneralEvaluator(BaseEvaluator):
         n_downsample: Union[
             int, None
         ] = 10000,  # Default is 10000, if provided downsample to this number of samples for faster evaluation. Set to None to disable downsampling.
+        top_k_classes: Union[int, None] = 20,  # Default is 20, if provided restrict classification tasks to top k classes, others combined into "other"
     ) -> Result:
         """Evaluates the performance of machine learning models on various feature representations and clinical parameters.
 
@@ -66,6 +67,7 @@ class GeneralEvaluator(BaseEvaluator):
             split_type: which split to use
                 use-split" for pre-defined splits, "CV-N" for N-fold cross-validation, or "LOOCV" for leave-one-out cross-validation (default: "use-split").
             n_downsample: If provided, downsample the data to this number of samples for faster evaluation. Default is 10000. Set to None to disable downsampling.
+            top_k_classes: If provided, restrict classification tasks to the top k classes, combining others into "other" (default: 20).
         Returns:
             The updated result object with evaluation results stored in `embedding_evaluation`.
         Raises
@@ -187,14 +189,14 @@ class GeneralEvaluator(BaseEvaluator):
 
                 #     df = self._load_input_for_ml_xmodal(task_xmodal, datasets, result, modality=modality)
                 # else:
-                df = self._load_input_for_ml(task, datasets, result)
+                df = self._load_input_for_ml(task, datasets, result, n_downsample)
 
                 if params == "all":
                     params = clin_data.columns.tolist()
 
                 for task_param in params:
-                    if "Latent" in task:
-                        print(f"Perform ML task for target parameter: {task_param}")
+                    # if "Latent" in task:
+                    print(f"Perform ML task for target parameter: {task_param}")
                     ## Check if classification or regression task
                     ml_type = self._get_ml_type(clin_data, task_param)
 
@@ -248,6 +250,7 @@ class GeneralEvaluator(BaseEvaluator):
                             sklearn_ml=sklearn_ml,
                             metric=metric,
                             ml_type=ml_type,
+                            top_k_classes=top_k_classes,
                         )
                     elif split_type.startswith("CV-"):
                         cv_folds = int(split_type.split("-")[1])
@@ -259,6 +262,7 @@ class GeneralEvaluator(BaseEvaluator):
                             sklearn_ml=sklearn_ml,
                             metric=metric,
                             cv_folds=cv_folds,
+                            top_k_classes=top_k_classes,
                         )
                     elif split_type == "LOOCV":
                         # Leave One Out Cross Validation
@@ -269,6 +273,7 @@ class GeneralEvaluator(BaseEvaluator):
                             sklearn_ml=sklearn_ml,
                             metric=metric,
                             cv_folds=len(df),
+                            top_k_classes=top_k_classes,
                         )
                     else:
                         raise ValueError(
@@ -306,6 +311,7 @@ class GeneralEvaluator(BaseEvaluator):
         sklearn_ml: Union[ClassifierMixin, RegressorMixin],
         metric: str,
         cv_folds: int = 5,
+        top_k_classes: Union[int, None] = 20,
     ):
         """Function learns on the given data frame df and label data the provided sklearn model.
 
@@ -317,7 +323,8 @@ class GeneralEvaluator(BaseEvaluator):
             task_param: Column name with label data
             sklearn_ml: Sklearn ML module specifying the ML algorithm
             metric: string specifying the metric to be calculated by cross validation
-            cv_folds:
+            cv_folds: Number of cross validation folds
+            top_k_classes: Number of top classes to keep, others combined into "other"
         Returns:
             score_df: data frame containing metrics (scores) for all CV runs (long format)
 
@@ -333,18 +340,23 @@ class GeneralEvaluator(BaseEvaluator):
             # Check that more samples per class than cv_folds
             min_class_count = y.value_counts().min()  # ty: ignore
             if min_class_count < cv_folds:
-                cv_folds = min_class_count
-                warnings.warn(
-                    f"Warning: Number of folds for cross-validation reduced to {cv_folds} due to limited number of samples in the smallest class."
-                )
                 # Combine all classes with less than cv_folds samples into one class "other"
+                warnings.warn(
+                    f"Warning: For task parameter {task_param}, some classes have less samples ({min_class_count}) than the number of CV folds ({cv_folds}). Combining these classes into one class 'other' for evaluation."
+                )
                 y = y.apply(
                     lambda x: x
                     if clin_data[task_param].value_counts().loc[x] >= cv_folds
                     else "other"
                 )
+            # Restrict number of classes to top k classes
+            if top_k_classes is not None: 
+                k = top_k_classes  # Set k to desired number of top classes
+                if len(y.unique()) > k:                
+                    top_k_classes = y.value_counts().nlargest(k).index
+                    y = y.apply(lambda x: x if x in top_k_classes else "other")
             scores = cross_validate(
-                sklearn_ml, df, y, cv=cv_folds, scoring=metric, return_train_score=True
+                sklearn_ml, df, y, cv=cv_folds, scoring=metric, return_train_score=True, n_jobs=-1
             )
 
             # Output
@@ -407,6 +419,7 @@ class GeneralEvaluator(BaseEvaluator):
         sklearn_ml: Union[ClassifierMixin, RegressorMixin],
         metric: str,
         ml_type: str,
+        top_k_classes: Union[int, None] = 20,
     ):
         """Trains the provided sklearn model on the training split and evaluates it on train, valid, and test splits using the specified metric.
 
@@ -418,6 +431,7 @@ class GeneralEvaluator(BaseEvaluator):
             sklearn_ml: Instantiated sklearn model to use for training and evaluation.
             metric: Scoring metric compatible with sklearn's get_scorer.
             ml_type: Type of machine learning task ("classification" or "regression").
+            top_k_classes: If provided, restrict classification tasks to the top k classes, combining others into "other" (default: 20).
 
         Returns:
             DataFrame containing evaluation scores for each split (train, valid, test) and the specified metric.
@@ -440,6 +454,13 @@ class GeneralEvaluator(BaseEvaluator):
         Y_train = clin_data.loc[train_samples, task_param]
         # train model once on training data
         if len(Y_train.unique()) > 1:  # ty: ignore
+
+            # Restrict number of classes to top k classes
+            if top_k_classes is not None and ml_type == "classification": 
+                k = top_k_classes  # Set k to desired number of top classes
+                if len(Y_train.unique()) > k:                
+                    top_k_classes = Y_train.value_counts().nlargest(k).index
+                    Y_train = Y_train.apply(lambda x: x if x in top_k_classes else "other")
             sklearn_ml.fit(X_train, Y_train)  # ty: ignore
 
             # eval on all splits
@@ -466,6 +487,11 @@ class GeneralEvaluator(BaseEvaluator):
                     )
 
                 if ml_type == "classification":
+                    if top_k_classes is not None:
+                        # Adjust Y to only contain top k classes and other as for Y_train
+                        Y = Y.apply(
+                            lambda x: x if x in top_k_classes else "other"
+                        )
                     # Check that Y has only classes which are present in Y_train
                     if (
                         len(
@@ -525,7 +551,7 @@ class GeneralEvaluator(BaseEvaluator):
 
     @staticmethod
     def _load_input_for_ml(
-        task: str, dataset: DatasetContainer, result: Result
+        task: str, dataset: DatasetContainer, result: Result, n_downsample: Union[int, None] = None
     ) -> pd.DataFrame:
         """Loads and processes input data for various machine learning tasks based on the specified task type.
 
@@ -541,6 +567,7 @@ class GeneralEvaluator(BaseEvaluator):
             task: The type of ML task. Supported values are "Latent", "UMAP", "PCA", "TSNE", and "RandomFeature".
             dataset: The dataset container object holding train, validation, and test splits.
             result: The result object containing model configuration and methods to retrieve latent representations.
+            n_downsample: If provided, downsample the data to this number of samples for faster processing. Default is None (no downsampling).
         Returns:
             A DataFrame containing the processed input data suitable for the specified ML task.
         Raises:
@@ -565,6 +592,13 @@ class GeneralEvaluator(BaseEvaluator):
                     epoch=final_epoch if split != "test" else -1, split=split
                 )
                 if df_split is not None and not df_split.empty:
+                    if n_downsample is not None:
+                        if df_split.shape[0] > n_downsample:
+                            print("Downsampling data for Latent representation...")
+                            sample_idx = np.random.choice(
+                                df_split.shape[0], n_downsample, replace=False
+                            )
+                            df_split = df_split.iloc[sample_idx]
                     dfs.append(df_split)
 
             df = pd.concat(dfs) if dfs else pd.DataFrame()
