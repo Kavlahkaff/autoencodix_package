@@ -330,6 +330,19 @@ class GeneralEvaluator(BaseEvaluator):
 
         ## Cross Validation
         if len(y.unique()) > 1:  # ty: ignore
+            # Check that more samples per class than cv_folds
+            min_class_count = y.value_counts().min()  # ty: ignore
+            if min_class_count < cv_folds:
+                cv_folds = min_class_count
+                warnings.warn(
+                    f"Warning: Number of folds for cross-validation reduced to {cv_folds} due to limited number of samples in the smallest class."
+                )
+                # Combine all classes with less than cv_folds samples into one class "other"
+                y = y.apply(
+                    lambda x: x
+                    if clin_data[task_param].value_counts().loc[x] >= cv_folds
+                    else "other"
+                )
             scores = cross_validate(
                 sklearn_ml, df, y, cv=cv_folds, scoring=metric, return_train_score=True
             )

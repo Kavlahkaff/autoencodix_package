@@ -458,8 +458,6 @@ class GeneralVisualizer(BaseVisualizer):
             else:
                 labels = [str(x) for x in labels]
 
-        fig, ax1 = plt.subplots(figsize=figsize)
-
         # check if label or embedding is longerm and duplicate the shorter one
         if len(labels) < embedding.shape[0]:
             print(
@@ -472,12 +470,28 @@ class GeneralVisualizer(BaseVisualizer):
             ]
         elif len(labels) > embedding.shape[0]:
             labels = list(set(labels))
+        
+        if len(np.unique(labels)) > 20:
+            warnings.warn(
+                f"The provided label column has {len(np.unique(labels))} unique labels which might make the scatter plot unclear."
+            )
+            # Restrict to top 20 labels
+            focus_labels = pd.Series(labels).value_counts().nlargest(20).index.tolist()
+            print(f"Focusing on top 20 labels instead")
 
         if focus_labels is not None:
             labels = [
                 label if label in focus_labels else "other" for label in labels
             ]
+        
+        # Increase figure size width if legend has has more than 10 labels (two columns)
+        if len(np.unique(labels)) > 10:
+            figsize = (figsize[0] * 1.5, figsize[1])
+        # Increase figure size width if legend labels are very long
+        max_label_length = max([len(str(label)) for label in np.unique(labels)])
+        figsize = (int(figsize[0] + max_label_length * 0.2), figsize[1])
 
+        fig, ax2 = plt.subplots(1, 1, figsize=figsize)
         if numeric:
             ax2 = sns.scatterplot(
                 x=embedding.iloc[:, 0],
@@ -493,14 +507,31 @@ class GeneralVisualizer(BaseVisualizer):
                 cat_pal = sns.color_palette("tab20", n_colors=len(np.unique(labels)))
             else:
                 cat_pal = sns.color_palette("tab10", n_colors=len(np.unique(labels)))
+            
+            if "other" in np.unique(labels):
+                # set color of "other" to light grey
+                other_color = (0.3, 0.3, 0.3)
+                cat_pal[list(np.unique(labels)).index("other")] = other_color
+            
+            # Adjust alpha depending on number of points
+            if len(labels) > 10000:
+                point_alpha = 0.2
+                point_size = 10
+            elif len(labels) > 5000:
+                point_alpha = 0.4
+                point_size = 20
+            else:
+                point_alpha = 0.7
+                point_size = 40
+
             ax2 = sns.scatterplot(
                 x=embedding.iloc[:, 0],
                 y=embedding.iloc[:, 1],
                 hue=labels,
                 hue_order=np.unique(labels),
                 palette=cat_pal,
-                s=40,
-                alpha=0.5,
+                s=point_size,
+                alpha=point_alpha,
                 ec="black",
             )
         if center:
@@ -514,7 +545,7 @@ class GeneralVisualizer(BaseVisualizer):
                 palette=cat_pal,
                 s=200,
                 ec="black",
-                alpha=0.9,
+                alpha=0.7,
                 marker="*",
                 legend=False,
                 ax=ax2,
@@ -549,6 +580,7 @@ class GeneralVisualizer(BaseVisualizer):
 
         # Add title to the plot
         ax2.set_title(layer)
+        plt.tight_layout()
 
         plt.close()
         return fig
@@ -570,6 +602,14 @@ class GeneralVisualizer(BaseVisualizer):
         Returns:
             fig: Figure object containing the clustermap
         """
+        if len(np.unique(labels)) > 50:
+            warnings.warn(
+                f"The provided label column has {len(np.unique(labels))} unique labels which might make the clustermap plot too big."
+            )
+            # Restrict to top 50 labels
+            focus_labels = pd.Series(labels).value_counts().nlargest(50).index.tolist()
+            print(f"Focusing on top 50 labels instead")
+
         if focus_labels is not None:
             labels = [
                 label if label in focus_labels else "other" for label in labels
@@ -635,6 +675,14 @@ class GeneralVisualizer(BaseVisualizer):
             else:
                 labels = [str(x) for x in labels]
 
+        if len(np.unique(labels)) > 20:
+            warnings.warn(
+                f"The provided label column has {len(np.unique(labels))} unique labels which might make the ridgeline plot unclear."
+            )
+            # Restrict to top 20 labels
+            focus_labels = pd.Series(labels).value_counts().nlargest(20).index.tolist()
+            print(f"Focusing on top 20 labels instead")
+            
         if focus_labels is not None:
             labels = [
                 label if label in focus_labels else "other" for label in labels
@@ -666,6 +714,11 @@ class GeneralVisualizer(BaseVisualizer):
             cat_pal = sns.color_palette("tab20", n_colors=len(labels))
         else:
             cat_pal = sns.color_palette("tab10", n_colors=len(labels))
+
+        if "other" in np.unique(labels):
+            # set color of "other" to light grey
+            other_color = (0.3, 0.3, 0.3)
+            cat_pal[list(np.unique(labels)).index("other")] = other_color
 
         # Length of longest latent dim string for aspect ratio
         len_longest_latent_dim = max([len(str(x)) for x in lat_space.columns])

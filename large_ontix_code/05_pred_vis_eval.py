@@ -1,10 +1,33 @@
 #### Step 0 - Definitions #####
 
+def keep_features_from_acxcontainer(acx_container, feature_ids_to_keep):
+	import numpy as np
+
+	for split in ['train', 'valid', 'test']:
+		if getattr(acx_container, split) is None:
+			continue
+
+		dataset = getattr(acx_container, split)
+		feature_id_array = np.array(dataset.feature_ids)
+		keep_indices = [i for i, fid in enumerate(feature_id_array) if fid in feature_ids_to_keep]
+
+		dataset.data = dataset.data[:, keep_indices]
+		dataset.feature_ids = [dataset.feature_ids[i] for i in keep_indices]
+		setattr(acx_container, split, dataset)
+
+	return acx_container
+
 import os
 import sys
+import pandas as pd
 
-data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
-results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/first_run_e250/"
+# data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
+data_final_folder = "/home/ewald/Github/autoencodix_package/results/large_ontix_save/first_run_e250/"
+# results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/first_run_e250/"
+results_folder = "/home/ewald/Github/autoencodix_package/results/large_ontix_save/first_run_e250/"
+
+# llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
+llm_ontology_folder = "./data/llm_ontologies/final_ontologies/"
 
 ont_from_cli = sys.argv[1]  # "chatgpt_ontology__", "custom_ontology__"
 
@@ -21,140 +44,153 @@ print("Loading holdout data ...")
 with open(file_holdout, "rb") as f:
 	acx_container = pickle.load(f)
 
+print("Preparing holdout data for feature size per ontology ...")
+ont_files = [
+	# Order from Latent Dim -> Hidden Dim -> Input Dim
+	os.path.join(llm_ontology_folder, f"{ont_from_cli}ensembl_level1.tsv"),
+	os.path.join(llm_ontology_folder, f"{ont_from_cli}ensembl_level2.tsv"),
+	]
+
+ont_lvl2 = pd.read_csv(ont_files[1], sep='\t', usecols=[0], header=None)
+ont_lvl2.columns = ['feature_id']
+
+# acx_container = keep_features_from_acxcontainer(acx_container, ont_lvl2['feature_id'].values)
+
 print("Loading trained model ...")
 loaded_ontix = acx.Ontix.load(file_path=final_ontix_model_file)
+loaded_ontix._trainer._config.save_vram = True  # Enable memory saving for prediction on holdout set
 
 print("Predicting on holdout data ...")
 result = loaded_ontix.predict(
 	data= acx_container
 )
 
-#### Step 2 - create plots ####
+# #### Step 2 - create plots ####
 
-# UMAP representations of latent space
-params_umap = ["sex","healthy"]
-loaded_ontix.visualizer.show_latent_space(
-	result=loaded_ontix.result,
-	plot_type='2D-scatter',
-	param=params_umap,
-	split='test',
-	n_downsample=20000)
-# Ridgeline plots of latent space
-params_ridge = ["sex","healthy"]
-loaded_ontix.visualizer.show_latent_space(
-	result=loaded_ontix.result,
-	plot_type='Ridgeline',
-	param=params_ridge,
-	split='test',
-	n_downsample=20000)
-# Heatmap representations of latent space
-params_heatmap = ["tissue_general", "development_stage", "sex", "disease"]
-loaded_ontix.visualizer.show_latent_space(
-	result=loaded_ontix.result,
-	plot_type='Clustermap',
-	param=params_heatmap,
-	split='test',
-	n_downsample=20000)
+# # UMAP representations of latent space
+# params_umap = ["sex", "disease", "cell_type", "tissue_general", "development_stage"]
+# loaded_ontix.visualizer.show_latent_space(
+# 	result=loaded_ontix.result,
+# 	plot_type='2D-scatter',
+# 	param=params_umap,
+# 	split='test',
+# 	n_downsample=20000)
+# # Ridgeline plots of latent space
+# params_ridge = ["sex","disease", "cell_type", "tissue_general", "development_stage"]
+# loaded_ontix.visualizer.show_latent_space(
+# 	result=loaded_ontix.result,
+# 	plot_type='Ridgeline',
+# 	param=params_ridge,
+# 	split='test',
+# 	n_downsample=20000)
+# # Heatmap representations of latent space
+# params_heatmap = ["tissue_general", "development_stage", "sex", "disease"]
+# loaded_ontix.visualizer.show_latent_space(
+# 	result=loaded_ontix.result,
+# 	plot_type='Clustermap',
+# 	param=params_heatmap,
+# 	split='test',
+# 	n_downsample=20000)
 
-## Focused plots for specific metadata values
-# UMAP for disease "cystic fibrosis" vs. "COVID-19" vs. "healthy" vs. others
-params_umap_disease = ["disease"]
-loaded_ontix.visualizer.show_latent_space(
-	result=loaded_ontix.result,
-	plot_type='2D-scatter',
-	param=params_umap_disease,
-	focus_labels=["cystic fibrosis", "COVID-19", "healthy"],
-	split='test',
-	n_downsample=20000)
-# UMAP for tissue_general "lung" vs. "brain" vs. "liver" vs. others
-params_umap_tissue = ["tissue_general"]
-loaded_ontix.visualizer.show_latent_space(
-	result=loaded_ontix.result,
-	plot_type='2D-scatter',
-	param=params_umap_tissue,
-	focus_labels=["lung", "brain", "liver"],
-	split='test',
-	n_downsample=20000)
+# ## Focused plots for specific metadata values
+# # UMAP for disease "cystic fibrosis" vs. "COVID-19" vs. "normal" vs. others
+# params_umap_disease = ["disease"]
+# loaded_ontix.visualizer.show_latent_space(
+# 	result=loaded_ontix.result,
+# 	plot_type='2D-scatter',
+# 	param=params_umap_disease,
+# 	focus_labels=["cystic fibrosis", "COVID-19", "normal"],
+# 	split='test',
+# 	n_downsample=20000)
+# # UMAP for tissue_general "lung" vs. "brain" vs. "liver" vs. others
+# params_umap_tissue = ["tissue_general"]
+# loaded_ontix.visualizer.show_latent_space(
+# 	result=loaded_ontix.result,
+# 	plot_type='2D-scatter',
+# 	param=params_umap_tissue,
+# 	focus_labels=["lung", "brain", "liver"],
+# 	split='test',
+# 	n_downsample=20000)
 
-# Ridgeline for disease "cystic fibrosis" vs. "COVID-19" vs. "healthy" vs. others
-params_ridge_disease = ["disease"]
-loaded_ontix.visualizer.show_latent_space(
-	result=loaded_ontix.result,
-	plot_type='Ridgeline',
-	param=params_ridge_disease,
-	focus_labels=["cystic fibrosis", "COVID-19", "healthy"],
-	split='test',
-	n_downsample=20000)
-# Ridgeline for tissue_general "lung" vs. "brain" vs. "liver" vs. others
-params_ridge_tissue = ["tissue_general"]
-loaded_ontix.visualizer.show_latent_space(
-	result=loaded_ontix.result,
-	plot_type='Ridgeline',
-	param=params_ridge_tissue,
-	focus_labels=["lung", "brain", "liver"],
-	split='test',
-	n_downsample=20000)
+# # Ridgeline for disease "cystic fibrosis" vs. "COVID-19" vs. "normal" vs. others
+# params_ridge_disease = ["disease"]
+# loaded_ontix.visualizer.show_latent_space(
+# 	result=loaded_ontix.result,
+# 	plot_type='Ridgeline',
+# 	param=params_ridge_disease,
+# 	focus_labels=["cystic fibrosis", "COVID-19", "normal"],
+# 	split='test',
+# 	n_downsample=20000)
+# # Ridgeline for tissue_general "lung" vs. "brain" vs. "liver" vs. others
+# params_ridge_tissue = ["tissue_general"]
+# loaded_ontix.visualizer.show_latent_space(
+# 	result=loaded_ontix.result,
+# 	plot_type='Ridgeline',
+# 	param=params_ridge_tissue,
+# 	focus_labels=["lung", "brain", "liver"],
+# 	split='test',
+# 	n_downsample=20000)
 
-# Ridgeline for cell_type "alternatively activated macrophage" vs. "inflammatory macrophage" vs. others
-params_ridge_celltype = ["cell_type"]
-loaded_ontix.visualizer.show_latent_space(
-	result=loaded_ontix.result,
-	plot_type='Ridgeline',
-	param=params_ridge_celltype,
-	focus_labels=["alternatively activated macrophage", "inflammatory macrophage"],
-	split='test',
-	n_downsample=20000)
+# # Ridgeline for cell_type "alternatively activated macrophage" vs. "inflammatory macrophage" vs. others
+# params_ridge_celltype = ["cell_type"]
+# loaded_ontix.visualizer.show_latent_space(
+# 	result=loaded_ontix.result,
+# 	plot_type='Ridgeline',
+# 	param=params_ridge_celltype,
+# 	focus_labels=["alternatively activated macrophage", "inflammatory macrophage"],
+# 	split='test',
+# 	n_downsample=20000)
 
-# Ridgeline for cell_type "CD4-positive helper T cell" vs. "CD8-positive, alpha-beta cytotoxic T cell" vs. "regulatory T cell" vs. others
-params_ridge_celltype2 = ["cell_type"]
-loaded_ontix.visualizer.show_latent_space(
-	result=loaded_ontix.result,
-	plot_type='Ridgeline',
-	param=params_ridge_celltype2,
-	focus_labels=["CD4-positive helper T cell", "CD8-positive, alpha-beta cytotoxic T cell", "regulatory T cell"],
-	split='test',
-	n_downsample=20000)
+# # Ridgeline for cell_type "CD4-positive helper T cell" vs. "CD8-positive, alpha-beta cytotoxic T cell" vs. "regulatory T cell" vs. others
+# params_ridge_celltype2 = ["cell_type"]
+# loaded_ontix.visualizer.show_latent_space(
+# 	result=loaded_ontix.result,
+# 	plot_type='Ridgeline',
+# 	param=params_ridge_celltype2,
+# 	focus_labels=["CD4-positive helper T cell", "CD8-positive, alpha-beta cytotoxic T cell", "regulatory T cell"],
+# 	split='test',
+# 	n_downsample=20000)
 
-# Ridgeline for cell_type "type I muscle cell" vs. "type II muscle cell" vs. others
-params_ridge_celltype3 = ["cell_type"]
-loaded_ontix.visualizer.show_latent_space(
-	result=loaded_ontix.result,
-	plot_type='Ridgeline',
-	param=params_ridge_celltype3,
-	focus_labels=["type I muscle cell", "type II muscle cell"],
-	split='test',
-	n_downsample=20000)
+# # Ridgeline for cell_type "type I muscle cell" vs. "type II muscle cell" vs. others
+# params_ridge_celltype3 = ["cell_type"]
+# loaded_ontix.visualizer.show_latent_space(
+# 	result=loaded_ontix.result,
+# 	plot_type='Ridgeline',
+# 	param=params_ridge_celltype3,
+# 	focus_labels=["type I muscle cell", "type II muscle cell"],
+# 	split='test',
+# 	n_downsample=20000)
 
 
-# Clustermap for disease "cystic fibrosis" vs. "COVID-19" vs. "healthy" vs. others
-params_heatmap_disease = ["disease"]
-loaded_ontix.visualizer.show_latent_space(
-	result=loaded_ontix.result,
-	plot_type='Clustermap',
-	param=params_heatmap_disease,
-	focus_labels=["cystic fibrosis", "COVID-19", "healthy"],
-	split='test',
-	n_downsample=20000)
+# # Clustermap for disease "cystic fibrosis" vs. "COVID-19" vs. "normal" vs. others
+# params_heatmap_disease = ["disease"]
+# loaded_ontix.visualizer.show_latent_space(
+# 	result=loaded_ontix.result,
+# 	plot_type='Clustermap',
+# 	param=params_heatmap_disease,
+# 	focus_labels=["cystic fibrosis", "COVID-19", "normal"],
+# 	split='test',
+# 	n_downsample=20000)
 
-# Clustermap for tissue_general "lung" vs. "brain" vs. "liver" vs. others
-params_heatmap_tissue = ["tissue_general"]
-loaded_ontix.visualizer.show_latent_space(
-	result=loaded_ontix.result,
-	plot_type='Clustermap',
-	param=params_heatmap_tissue,
-	focus_labels=["lung", "brain", "liver"],
-	split='test',
-	n_downsample=20000)
+# # Clustermap for tissue_general "lung" vs. "brain" vs. "liver" vs. others
+# params_heatmap_tissue = ["tissue_general"]
+# loaded_ontix.visualizer.show_latent_space(
+# 	result=loaded_ontix.result,
+# 	plot_type='Clustermap',
+# 	param=params_heatmap_tissue,
+# 	focus_labels=["lung", "brain", "liver"],
+# 	split='test',
+# 	n_downsample=20000)
 
-# Clustermap for cell_type "alternatively activated macrophage" vs. "inflammatory macrophage" vs. "CD4-positive helper T cell" vs. "CD8-positive, alpha-beta cytotoxic T cell" vs. "regulatory T cell" vs. "type I muscle cell" vs. "type II muscle cell" vs. others
-params_heatmap_celltype = ["cell_type"]
-loaded_ontix.visualizer.show_latent_space(
-	result=loaded_ontix.result,
-	plot_type='Clustermap',
-	param=params_heatmap_celltype,
-	focus_labels=["alternatively activated macrophage", "inflammatory macrophage", "CD4-positive helper T cell", "CD8-positive, alpha-beta cytotoxic T cell", "regulatory T cell", "type I muscle cell", "type II muscle cell"],
-	split='test',
-	n_downsample=20000)
+# # Clustermap for cell_type "alternatively activated macrophage" vs. "inflammatory macrophage" vs. "CD4-positive helper T cell" vs. "CD8-positive, alpha-beta cytotoxic T cell" vs. "regulatory T cell" vs. "type I muscle cell" vs. "type II muscle cell" vs. others
+# params_heatmap_celltype = ["cell_type"]
+# loaded_ontix.visualizer.show_latent_space(
+# 	result=loaded_ontix.result,
+# 	plot_type='Clustermap',
+# 	param=params_heatmap_celltype,
+# 	focus_labels=["alternatively activated macrophage", "inflammatory macrophage", "CD4-positive helper T cell", "CD8-positive, alpha-beta cytotoxic T cell", "regulatory T cell", "type I muscle cell", "type II muscle cell"],
+# 	split='test',
+# 	n_downsample=20000)
 
 
 #### Step 3 - Evaluate embeddings ####
@@ -181,8 +217,9 @@ loaded_ontix.evaluate(
 	metric_class = own_metric_class, 
 	metric_regression = own_metric_regression, 
 	reference_methods = ["PCA"], # No reference methods for tuning
-	split_type = "CV-5",
-	n_downsample = int(acx_container.test.data.shape[0]*0.25), # Use a subset of the data for faster evaluation
+	split_type = "CV-3",
+	n_downsample = int(acx_container.test.data.shape[0]*0.01), # Use a subset of the data for faster evaluation
+	# n_downsample = None, # Use a subset of the data for faster evaluation
 )
 
 #### Step 4 - Save ####
