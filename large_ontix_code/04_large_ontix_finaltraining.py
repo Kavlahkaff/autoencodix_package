@@ -2,6 +2,7 @@
 import os
 import sys
 import pickle
+import pandas as pd
 import autoencodix as acx
 from autoencodix.configs.ontix_config import OntixConfig
 
@@ -54,8 +55,8 @@ acx_container = keep_features_from_acxcontainer(acx_container, ont_lvl2['feature
 
 scconfig = OntixConfig(
 	## Fixed params
-	epochs=best_hyperparams['config_epochs'],
-	# epochs=3, # Reduce for testing
+	# epochs=best_hyperparams['config_epochs'],
+	epochs=5, # Reduce for testing
 	checkpoint_interval= best_hyperparams['config_checkpoint_interval'],
 	loss_reduction= best_hyperparams['config_loss_reduction'],
 	## Tunable params
