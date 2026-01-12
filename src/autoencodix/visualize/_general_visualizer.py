@@ -471,7 +471,7 @@ class GeneralVisualizer(BaseVisualizer):
         elif len(labels) > embedding.shape[0]:
             labels = list(set(labels))
         
-        if len(np.unique(labels)) > 20:
+        if len(np.unique(labels)) > 20 and focus_labels is None:
             warnings.warn(
                 f"The provided label column has {len(np.unique(labels))} unique labels which might make the scatter plot unclear."
             )
@@ -602,7 +602,7 @@ class GeneralVisualizer(BaseVisualizer):
         Returns:
             fig: Figure object containing the clustermap
         """
-        if len(np.unique(labels)) > 50:
+        if len(np.unique(labels)) > 50 and focus_labels is None:
             warnings.warn(
                 f"The provided label column has {len(np.unique(labels))} unique labels which might make the clustermap plot too big."
             )
@@ -675,7 +675,7 @@ class GeneralVisualizer(BaseVisualizer):
             else:
                 labels = [str(x) for x in labels]
 
-        if len(np.unique(labels)) > 20:
+        if len(np.unique(labels)) > 20 and focus_labels is None:
             warnings.warn(
                 f"The provided label column has {len(np.unique(labels))} unique labels which might make the ridgeline plot unclear."
             )
