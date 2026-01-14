@@ -30,9 +30,13 @@ def sample_hyperparams(config_path="/data/horse/ws/luth474h-autoencodix_synetune
 
     return cfg
 
+def sample_hp_configs(architecture, num_hp, hp_seed):
+    random.seed(hp_seed)
+
+    hp_list = []
+    for _ in range(num_hp):
+        hp_list.append(sample_hyperparams(architecture=architecture))
+    return hp_list
 
 if __name__ == "__main__":
-    print(sample_hyperparams(architecture="vanillix"))
-    print(sample_hyperparams(architecture="disentanglix"))
-    print(sample_hyperparams(architecture="varix"))
-    print(sample_hyperparams(architecture="ontix"))
+    print(sample_hp_configs("disentanglix", 3, 1))

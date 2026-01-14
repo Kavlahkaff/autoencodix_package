@@ -2,7 +2,7 @@ import sklearn
 from sklearn import linear_model
 import matplotlib.pyplot as plt
 
-def evaluate(model, tasks):
+def evaluate(model, tasks, epochs):
     sklearn.set_config(enable_metadata_routing=True)
 
     cls = linear_model.LogisticRegression(
@@ -25,4 +25,7 @@ def evaluate(model, tasks):
         "value"
     ].mean()
     valid_recon_loss = float(model.result.sub_losses.get("recon_loss").get(epoch=-1, split="valid"))
-    return avg_mltask_performance, valid_recon_loss
+    loss_per_epoch = {}
+    for epoch in epochs:
+        loss_per_epoch[epoch] = float(model.result.sub_losses.get("recon_loss").get(epoch=epoch, split="valid"))
+    return avg_mltask_performance, valid_recon_loss, loss_per_epoch

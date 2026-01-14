@@ -5,9 +5,8 @@ from autoencodix_runner.data import create_data_config
 from autoencodix_runner.models import create_model
 from autoencodix_runner.evaluation import evaluate
 from autoencodix_runner.hp_loader import load_results, get_top_k_configs
-from autoencodix_runner.hyperparams import sample_hyperparams
+from autoencodix_runner.hyperparams import sample_hp_configs
 import torch
-import pickle
 
 import yaml
 
@@ -23,6 +22,12 @@ def load_ontology_paths(dataset, ontology_name):
     paths = cfg[dataset][ontology_name]["paths"]
     # return list in correct order (lvl1, lvl2)
     return [paths["lvl1"], paths["lvl2"]]
+
+
+def get_epochs():
+    cfg = yaml.safe_load(open("/data/horse/ws/luth474h-autoencodix_synetune/autoencodix_package/benchmarking/configs/search_space.yaml"))
+
+    return cfg["fixed"]["epochs"]
 
 
 
@@ -41,17 +46,17 @@ def parse():
 
     ap.add_argument("--top-k", type=int, default=1,
                     help="How many top configs to test (if hp-source=previous)")
-    ap.add_argument("--seeds", type=int, default=3)
+    ap.add_argument("--hp_seed", type=int, default=1)
+    ap.add_argument("--autoencodix_seed", type=int, default=42)
     return ap.parse_args()
 
 def main():
     args = parse()
-
     data_config = create_data_config(args.dataset, args.modalities)
 
     # if random, samples new config
     if args.hp_source == "random":
-        hyperparam_list = [sample_hyperparams()]
+        hyperparam_list = sample_hp_configs(args.architecture, args.num_hp_configs, args.hp_seed)
     # if previous loads the best k configs from previous results
     else:
         if not args.previous_results_path:
@@ -68,19 +73,18 @@ def main():
             dataset=args.dataset,
             ontology_name=args.ontology
         )
-    for seed in range(args.seeds):
-        random.seed(seed)
+    for seed in range(1, args.autoencodix_seed + 1):
         for hp_idx, hyperparams in enumerate(hyperparam_list):
 
             print(f"Running HP set {hp_idx}: {hyperparams}")
 
-            run_id = f"{args.architecture}_{args.dataset}_{seed}_{'_'.join(args.modalities)}_hp{hp_idx}"
+            run_id = f"{args.architecture}_{args.dataset}_{args.autoencodix_seed}_{'_'.join(args.modalities)}_hp{hp_idx}"
 
             model = create_model(
                 arch=args.architecture,
                 data_config=data_config,
                 hyperparams=hyperparams,
-                seed=seed,
+                seed=args.autoencodix_seed,
                 ontologies=ontology_paths,
                 sep="\t"
             )
@@ -92,8 +96,8 @@ def main():
                           "PATH_N_STAGE", "DSS_STATUS", "OS_STATUS"],
                 "schc": ["author_cell_type", "age_group", "sex"],
             }[args.dataset]
-
-            avg, rec = evaluate(model, tasks)
+            epochs = get_epochs()
+            avg, rec, loss_per_epoch = evaluate(model, tasks, epochs)
             end_time = time.perf_counter()
             runtime_sec = end_time - start_time
 
@@ -102,13 +106,14 @@ def main():
             config_dict = {
                     "RUN_ID": run_id,
                     "ARCHITECTURE": args.architecture,
-                    "SEED": seed,
+                    "SEED": args.autoencodix_seed,
                     "DATASET": args.dataset,
                     "MODALITIES": args.modalities,
                     "HYPERPARAMETERS": hyperparams,
                     "AVG_ML_TASK_PERFORMANCE": avg,
                     "VALID_RECON_LOSS": rec,
-                    "RUNTIME_SECONDS": round(runtime_sec, 2),
+                    "loss_per_epoch": loss_per_epoch,
+                    "RUNTIME_SECONDS": round(runtime_sec, 4),
                     }
             run_type = "gpu" if torch.cuda.is_available() else "cpu"
             # Save to txt file in result directory

@@ -1,6 +1,6 @@
 fixed:
   epochs: 300
-  checkpoint_interval: 100
+  checkpoint_interval: 300
   loss_reduction: "sum"
 
 search:
