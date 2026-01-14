@@ -12,7 +12,7 @@ search:
   #   log-uniform ranges: [min, max]
   learning_rate: [1.0e-5, 1.0e-1]
   weight_decay: [1.0e-5, 1.0e-1]
-  beta: [0.001, 10]
+  beta: [0.001, 10.0]
   beta_mi: [1,2,3,4,5,6,7,8,9,10]
   beta_tc: [1000, 2000, 3000, 4000, 5000]
   beta_dimKL: [0.01, 1.0]

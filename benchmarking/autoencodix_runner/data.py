@@ -1,4 +1,4 @@
-from src.autoencodix.configs.default_config import DataConfig, DataInfo
+from autoencodix.configs.default_config import DataConfig, DataInfo
 
 
 #tcga dataset files

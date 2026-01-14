@@ -1,5 +1,5 @@
 import pandas as pd
-from benchmarking.autoencodix_runner.hyperparams import random_log
+from autoencodix_runner.hyperparams import random_log
 import random
 
 def load_results(path: str) -> pd.DataFrame:

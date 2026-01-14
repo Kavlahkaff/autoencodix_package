@@ -6,8 +6,8 @@ from autoencodix_runner.models import create_model
 from autoencodix_runner.evaluation import evaluate
 from autoencodix_runner.hp_loader import load_results, get_top_k_configs
 from autoencodix_runner.hyperparams import sample_hyperparams
-
-
+import torch
+import pickle
 
 import yaml
 
@@ -32,7 +32,7 @@ def parse():
     ap.add_argument("--dataset", required=True)
     ap.add_argument("--modalities", nargs="+", required=True)
     ap.add_argument("--ontology", required=False)
-    ap.add_argument("--search-config", default="configs/search_space.yaml")
+    ap.add_argument("--search-config")
     ap.add_argument("--hp-source", choices=["random", "previous"], default="random",
                     help="Choose whether to sample new HPs or load best previous ones")
 
@@ -51,7 +51,7 @@ def main():
 
     # if random, samples new config
     if args.hp_source == "random":
-        hyperparam_list = [sample_hyperparams(args.search_config)]
+        hyperparam_list = [sample_hyperparams()]
     # if previous loads the best k configs from previous results
     else:
         if not args.previous_results_path:
@@ -69,6 +69,7 @@ def main():
             ontology_name=args.ontology
         )
     for seed in range(args.seeds):
+        random.seed(seed)
         for hp_idx, hyperparams in enumerate(hyperparam_list):
 
             print(f"Running HP set {hp_idx}: {hyperparams}")
@@ -84,9 +85,7 @@ def main():
                 sep="\t"
             )
             start_time = time.perf_counter()
-            model.run()
-
-            #model.save(file_path=f"/data/horse/ws/luth474h-autoencodix_synetune/autoencodix_package/benchmarking/autoencodix_results/models/{run_id}")
+            result = model.run()
 
             tasks = {
                 "tcga": ["CANCER_TYPE", "SUBTYPE", "ONCOTREE_CODE", "SEX", "AJCC_PATHOLOGIC_TUMOR_STAGE", "GRADE",
@@ -111,10 +110,13 @@ def main():
                     "VALID_RECON_LOSS": rec,
                     "RUNTIME_SECONDS": round(runtime_sec, 2),
                     }
+            run_type = "gpu" if torch.cuda.is_available() else "cpu"
             # Save to txt file in result directory
-            result_dir = Path.Path("/data/horse/ws/luth474h-autoencodix_synetune/autoencodix_results")
+            result_dir = Path.Path("/data/horse/ws/luth474h-autoencodix_synetune/autoencodix_results/")
+            results_dir = result_dir / run_type
+            results_dir.mkdir(parents=True, exist_ok=True)
             # write file to result_dir
-            result_path = result_dir / f"{run_id}_result.txt"
+            result_path = results_dir / f"{run_id}_result.txt"
             with result_path.open('w') as f:
                 for key, value in config_dict.items():
                     f.write(f"{key}: {value}\n")

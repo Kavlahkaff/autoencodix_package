@@ -1,5 +1,5 @@
-import src.autoencodix as acx
-from src.autoencodix.configs import VarixConfig, VanillixConfig, DisentanglixConfig, OntixConfig
+import autoencodix as acx
+from autoencodix.configs import VarixConfig, VanillixConfig, DisentanglixConfig, OntixConfig
 
 def create_model(arch, data_config, hyperparams, seed, ontologies=None, sep="\t"):
     if arch == "varix":
