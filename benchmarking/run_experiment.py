@@ -1,15 +1,15 @@
 import argparse
 import time
 import yaml
-import pathlib as Path
 import logging
 import sys
-
 from autoencodix_runner.data import create_data_config
 from autoencodix_runner.models import create_model
 from autoencodix_runner.evaluation import evaluate
-
-
+import pathlib
+import json
+import numpy as np
+import pickle
 # -----------------------------------------------------------------------------
 # Logging setup (flushes immediately, cluster-safe)
 # -----------------------------------------------------------------------------
@@ -65,12 +65,49 @@ def get_epochs():
     return cfg["fixed"]["epochs"]
 
 
+def construct_output_path(job, base_dir="/data/horse/ws/luth474h-autoencodix_synetune/autoencodix_results"):
+    """
+    Construct output directory matching batch structure:
+    base_dir/architecture/dataset/modality/[ontology/]seed_X/
+    
+    Example paths:
+    - vanillix: results/vanillix/tcga/DNA_CLIN/seed_1/
+    - ontix: results/ontix/tcga/DNA_CLIN/go_biological_process/seed_2/
+    """
+    path_parts = [
+        base_dir,
+        job["architecture"],
+        job["dataset"],
+        "_".join(job["modalities"]),  # Join modalities with underscore
+    ]
+    
+    # Add ontology for ontix
+    if job["architecture"] == "ontix" and job.get("ontology"):
+        path_parts.append(job["ontology"])
+    
+    # Add seed directory
+    path_parts.append(f"seed_{job['seed']}")
+    
+    result_dir = pathlib.Path(*path_parts)
+    result_dir.mkdir(parents=True, exist_ok=True)
+    
+    return result_dir
+
+# Helper function to handle Numpy/Tensor types automatically
+def json_numpy_serializer(obj):
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, np.floating):
+        return float(obj)
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    raise TypeError(f"Type {type(obj)} not serializable")
 # -----------------------------------------------------------------------------
 # Main job logic
 # -----------------------------------------------------------------------------
 def run_job(config_path):
     logger.info("Loading config from: %s", config_path)
-
+    #torch.set_float32_matmul_precision('high')
     with open(config_path, "r") as f:
         job = yaml.safe_load(f)
 
@@ -107,8 +144,8 @@ def run_job(config_path):
     start_time = time.perf_counter()
     # Instead of result = model.run(), call the steps individually with logs:
     model.run()
+    runtime_sec = time.perf_counter() - start_time
     result = model.result
-    print(result)
     logger.info("Model run finished")
 
     # 5. Evaluate
@@ -129,7 +166,6 @@ def run_job(config_path):
 
     logger.info("Starting evaluation")
     avg, rec, loss_per_epoch = evaluate(model, tasks, get_epochs())
-    runtime_sec = time.perf_counter() - start_time
     logger.info("Evaluation finished (runtime %.2f sec)", runtime_sec)
 
     # 6. Save Results
@@ -139,6 +175,7 @@ def run_job(config_path):
         "SEED": job["seed"],
         "DATASET": job["dataset"],
         "MODALITIES": job["modalities"],
+        "ONTOLOGY": job.get("ontology", "N/A"),
         "HYPERPARAMETERS": job["hyperparameters"],
         "AVG_ML_TASK_PERFORMANCE": avg,
         "VALID_RECON_LOSS": rec,
@@ -146,21 +183,19 @@ def run_job(config_path):
         "RUNTIME_SECONDS": round(runtime_sec, 4),
     }
 
-    result_dir = (
-        Path.Path(
-            "/data/horse/ws/luth474h-autoencodix_synetune/autoencodix_results/"
-        )
-        / job["architecture"]
-    )
-    result_dir.mkdir(parents=True, exist_ok=True)
+    # Construct output directory matching batch structure
+    result_dir = construct_output_path(job)
+    result_dir.mkdir(parents=True, exist_ok=True) # Ensure dir exists
 
-    output_path = result_dir / f"{job['run_id']}_result.txt"
+    output_path = result_dir / f"{job['run_id']}_result.json"
+
     with open(output_path, "w") as f:
-        for key, value in results.items():
-            f.write(f"{key}: {value}\n")
-
+        json.dump(results, f, indent=4, default=json_numpy_serializer)
+    
+    pkl_path = result_dir / f"{job['run_id']}_full_object.pkl"
+    with open(pkl_path, "wb") as f:
+        pickle.dump(result, f)
     logger.info("Finished successfully. Results saved to %s", output_path)
-
 
 # -----------------------------------------------------------------------------
 # Entry point
