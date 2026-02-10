@@ -2,9 +2,13 @@
 import sys
 
 # data_folder = "./data/census_chunks/"
-data_folder = "/data/horse/ws/jaew523d-large_ontix_project/census_chunks/"
+# data_folder = "/data/horse/ws/jaew523d-large_ontix_project/census_chunks/"
+data_folder = "/data/horse/ws/jaew523d-large_ontix_project/census_chunks_taskRun/"
+
 # llm_ontology_folder = "./data/llm_ontologies/final_ontologies/"
-llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
+# llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
+llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/task-oriented/"
+
 max_chunk_size = 1000 # Downsample chunks larger than this size
 perc_genes = 0.05 # Filter cells with lower than this percentage of genes expressed
 
@@ -23,7 +27,7 @@ if step_from_cli == "step1":
 	print("STEP 1 - Determine census chunks")
 
 	import cellxgene_census
-	census = cellxgene_census.open_soma()
+	census = cellxgene_census.open_soma(census_version = "2025-11-08")
 
 	value_filter="is_primary_data == True" # Only original data publications to avoid duplicates
 	species = "homo_sapiens"
@@ -119,7 +123,7 @@ if step_from_cli == "step2":
 		elif chunk_name[3] == "diseased":
 			obs_value_filter = f"tissue_general in ['{chunk_name[0]}'] and cell_type_ontology_term_id in ['{chunk_name[1]}'] and sex in ['{chunk_name[2]}'] and disease not in ['normal'] and is_primary_data == True"
 
-		with cellxgene_census.open_soma() as census:
+		with cellxgene_census.open_soma(census_version = "2025-11-08") as census:
 			adata_chunk = cellxgene_census.get_anndata(
 				census=census, 
 				organism="Homo sapiens",

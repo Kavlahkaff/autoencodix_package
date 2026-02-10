@@ -47,6 +47,7 @@ class GeneralEvaluator(BaseEvaluator):
             int, None
         ] = 10000,  # Default is 10000, if provided downsample to this number of samples for faster evaluation. Set to None to disable downsampling.
         top_k_classes: Union[int, None] = 20,  # Default is 20, if provided restrict classification tasks to top k classes, others combined into "other"
+        exclude_classes: Union[list, None] = None,  # Default is None, if provided exclude these classes from evaluation
     ) -> Result:
         """Evaluates the performance of machine learning models on various feature representations and clinical parameters.
 
@@ -68,6 +69,7 @@ class GeneralEvaluator(BaseEvaluator):
                 use-split" for pre-defined splits, "CV-N" for N-fold cross-validation, or "LOOCV" for leave-one-out cross-validation (default: "use-split").
             n_downsample: If provided, downsample the data to this number of samples for faster evaluation. Default is 10000. Set to None to disable downsampling.
             top_k_classes: If provided, restrict classification tasks to the top k classes, combining others into "other" (default: 20).
+            exclude_classes: List of classes to exclude from evaluation (default: None).
         Returns:
             The updated result object with evaluation results stored in `embedding_evaluation`.
         Raises
@@ -263,6 +265,7 @@ class GeneralEvaluator(BaseEvaluator):
                             metric=metric,
                             cv_folds=cv_folds,
                             top_k_classes=top_k_classes,
+                            exclude_classes=exclude_classes,
                         )
                     elif split_type == "LOOCV":
                         # Leave One Out Cross Validation
@@ -274,6 +277,7 @@ class GeneralEvaluator(BaseEvaluator):
                             metric=metric,
                             cv_folds=len(df),
                             top_k_classes=top_k_classes,
+                            exclude_classes=exclude_classes,
                         )
                     else:
                         raise ValueError(
@@ -312,6 +316,7 @@ class GeneralEvaluator(BaseEvaluator):
         metric: str,
         cv_folds: int = 5,
         top_k_classes: Union[int, None] = 20,
+        exclude_classes: Union[list, None] = None,
     ):
         """Function learns on the given data frame df and label data the provided sklearn model.
 
@@ -325,6 +330,7 @@ class GeneralEvaluator(BaseEvaluator):
             metric: string specifying the metric to be calculated by cross validation
             cv_folds: Number of cross validation folds
             top_k_classes: Number of top classes to keep, others combined into "other"
+            exclude_classes: List of classes to exclude from evaluation (default: None)
         Returns:
             score_df: data frame containing metrics (scores) for all CV runs (long format)
 
@@ -333,6 +339,9 @@ class GeneralEvaluator(BaseEvaluator):
         # X -> df
         # Y -> task_param
         y: Union[pd.Series, pd.DataFrame] = clin_data.loc[df.index, task_param]
+        if exclude_classes is not None:
+            df = df[~y.isin(exclude_classes)]
+            y = y[~y.isin(exclude_classes)]
         score_df = dict()
 
         ## Cross Validation
