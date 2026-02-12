@@ -4,15 +4,24 @@ import sys
 import scanpy
 import anndata
 # data_folder = "./data/census_chunks/"
-data_folder = "/data/horse/ws/jaew523d-large_ontix_project/census_chunks/"
-data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
+# data_folder = "/data/horse/ws/jaew523d-large_ontix_project/census_chunks/"
+data_folder = "/data/horse/ws/jaew523d-large_ontix_project/census_chunks_taskRun/"
+
+# data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
+data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data_taskRun/"
 
 # create data_final_folder if it doesn't exist
 if not os.path.exists(data_final_folder):
 	os.makedirs(data_final_folder)
 # llm_ontology_folder = "./data/llm_ontologies/final_ontologies/"
-llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
+# llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
+llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/task-oriented/"
+
 mock_config_file = "/data/horse/ws/jaew523d-large_ontix_project/large-ontix.yaml"
+# ontology_path = "/home/ewald/Github/autoencodix_package/data/hsapdv.obo"
+ontology_path = "/data/horse/ws/jaew523d-large_ontix_project/hsapdv.obo"
+tasks_file_path = "/data/horse/ws/jaew523d-large_ontix_project/gemini_celltype_tasks2.json"
+
 
 step_from_cli = sys.argv[1]  # "step1", "step2", "..."
 fraction_for_tuning = 0.05
@@ -39,8 +48,123 @@ if step_from_cli == "step1":
 	adata = anndata.concat(adata_list, merge="same")
 	adata.obs.drop("soma_joinid", axis=1, inplace=True)
 	adata.var.drop("feature_id", axis=1, inplace=True)
+ 
+	##### Expanding Metadata #####
+	## Improve developmental stage metadata ##
+	
 
-	 ## Log-normalize the data inplace
+	# New manual high-level stages from Human Development:
+	stages_list = [
+		"HsapDv:0000037", ## fetal stage
+		"HsapDv:0000002", ## embryonic stage
+		"HsapDv:0000260", ## nursing stage (0-11 months)
+		"HsapDv:0000265", ## child stage (1-4yo)
+		"HsapDv:0000271", ## juvenile stage (5-14yo)
+		"HsapDv:0000268", ## 15-19yo
+		"HsapDv:0000237", ## third decade stage
+		"HsapDv:0000238", ## fourth decade stage
+		"HsapDv:0000239", ## fifth decade stage
+		"HsapDv:0000240", ## sixth decade stage
+		"HsapDv:0000272", ## 60-79 year-old stage
+		"HsapDv:0000095", ## 80 year-old and over stage    
+	]
+
+	from collections import defaultdict, deque
+	from typing import Dict, Iterable, List
+	import pronto
+
+	def descendants_by_part_of(onto: pronto.Ontology, terms: Iterable[str]) -> Dict[str, List[str]]:
+		"""
+		Return {term_id: [all descendant term_ids]} using part_of relationships.
+		"""
+
+		# Build parent -> direct children map for part_of
+		children = defaultdict(list)
+		for term in onto.terms():
+			if term.obsolete:
+				continue
+			# term.relationships is a dict: {RelationshipType: set(terms)}
+			for rel_type, targets in term.relationships.items():
+				if rel_type.id == "part_of":
+					for parent in targets:
+						children[parent.id].append(term.id)
+
+		# Collect all descendants
+		result: Dict[str, List[str]] = {}
+		for root in terms:
+			seen = set()
+			queue = deque(children.get(root, []))
+			while queue:
+				child = queue.popleft()
+				if child in seen:
+					continue
+				seen.add(child)
+				queue.extend(children.get(child, []))
+			result[root] = sorted(seen)
+		return result
+
+	# Load ontology
+	onto = pronto.Ontology(ontology_path)
+	# Get descendants for each stage
+	stage_to_descendants = descendants_by_part_of(onto, stages_list)
+
+	# Optional, print the number of descendants for each stage
+	for stage, descendants in stage_to_descendants.items():
+		print(f"{stage} has {len(descendants)} descendants")
+	
+	# Total unique descendants
+	all_descendants = set()
+	for descs in stage_to_descendants.values():
+		all_descendants.update(descs)
+	print(f"Total unique descendants: {len(all_descendants)}")
+
+	# Reverse result dictionary for mapping term_id to high_level_stage_id
+	term_to_stage = {}
+	for stage, descendants in stage_to_descendants.items():
+		for desc in descendants:
+			term_to_stage[desc] = stage
+
+	# Add top level stages themselves
+	for stage in stages_list:
+		term_to_stage[stage] = stage
+
+	# Dict for id to name mapping
+	onto_names = dict()
+	for term_id in term_to_stage.keys():
+		onto_names[term_id] = onto.get_term(term_id).name
+
+	# New columns in adata.obs
+	adata.obs["high_level_stage_id"] = adata.obs["development_stage_ontology_term_id"].map(term_to_stage)
+	adata.obs["high_level_stage_name"] = adata.obs["high_level_stage_id"].map(onto_names)
+	# Set NA values to "other"
+	adata.obs.fillna({"high_level_stage_id": "other", "high_level_stage_name": "other"}, inplace=True)
+
+	#####  Expand metadata with cell type tasks ####
+	from flask import json
+
+	with open(tasks_file_path, "r") as f:
+		gemini_celltype_tasks2 = json.load(f)
+
+	# Iterate over tasks and expand metadata with new columns for each task
+	for task_name, cell_types in gemini_celltype_tasks2.items():
+		# Create a new column for the task, initialized to "other"
+		adata.obs[task_name] = "other"
+		# For each cell type in the task, set the corresponding rows to the cell type name
+		for cell_type in cell_types:
+			cell_type_id = cell_type["id"]
+			cell_type_name = cell_type["name"]
+			adata.obs.loc[
+				adata.obs["cell_type_ontology_term_id"] == cell_type_id,
+				task_name
+			] = cell_type_name
+   
+	### New column for is_diseased (not normal)
+	adata.obs["is_diseased"] = adata.obs["disease"].apply(lambda x: "normal" if x == "normal" else "diseased")
+	adata.obs["is_diseased"].value_counts() 
+	###### End of metadata expansion #####
+ 
+ 
+	## Log-normalize the data inplace
 	print("Log-normalizing the data")
 	scanpy.pp.log1p(adata, copy=False)
 
