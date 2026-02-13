@@ -360,10 +360,9 @@ class GeneralEvaluator(BaseEvaluator):
                 )
             # Restrict number of classes to top k classes
             if top_k_classes is not None: 
-                k = top_k_classes  # Set k to desired number of top classes
-                if len(y.unique()) > k:                
-                    top_k_classes = y.value_counts().nlargest(k).index
-                    y = y.apply(lambda x: x if x in top_k_classes else "other")
+                if len(y.unique()) > top_k_classes:                
+                    top_k_classes_list = y.value_counts().nlargest(top_k_classes).index
+                    y = y.apply(lambda x: x if x in top_k_classes_list else "other")
             scores = cross_validate(
                 sklearn_ml, df, y, cv=cv_folds, scoring=metric, return_train_score=True, n_jobs=-1
             )
@@ -466,10 +465,9 @@ class GeneralEvaluator(BaseEvaluator):
 
             # Restrict number of classes to top k classes
             if top_k_classes is not None and ml_type == "classification": 
-                k = top_k_classes  # Set k to desired number of top classes
-                if len(Y_train.unique()) > k:                
-                    top_k_classes = Y_train.value_counts().nlargest(k).index
-                    Y_train = Y_train.apply(lambda x: x if x in top_k_classes else "other")
+                if len(Y_train.unique()) > top_k_classes:                
+                    top_k_classes_list = Y_train.value_counts().nlargest(top_k_classes).index
+                    Y_train = Y_train.apply(lambda x: x if x in top_k_classes_list else "other")
             sklearn_ml.fit(X_train, Y_train)  # ty: ignore
 
             # eval on all splits
@@ -496,10 +494,10 @@ class GeneralEvaluator(BaseEvaluator):
                     )
 
                 if ml_type == "classification":
-                    if top_k_classes is not None:
+                    if top_k_classes is not None and (len(Y_train.unique()) > top_k_classes):
                         # Adjust Y to only contain top k classes and other as for Y_train
                         Y = Y.apply(
-                            lambda x: x if x in top_k_classes else "other"
+                            lambda x: x if x in top_k_classes_list else "other"
                         )
                     # Check that Y has only classes which are present in Y_train
                     if (
