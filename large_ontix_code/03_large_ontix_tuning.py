@@ -10,8 +10,10 @@ from syne_tune.optimizer.baselines import CQR
 from syne_tune.experiments import load_experiment
 
 # data_final_folder = "./data/large_sc_data/"
-data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
-results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/second_run_e250/"
+# data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
+data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data_taskRun/"
+
+results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/third_run_e250/"
 # results_folder = "./results/large_ontix_save/testing/"
 
 # Create results_folder if it doesn't exist
@@ -24,9 +26,19 @@ n_workers = int(sys.argv[3])  # number of parallel workers for tuning
 
 metric = "ml_performance" # "ml_performance" or "recon_loss"
 
-tasks = ["cell_type", "tissue", "development_stage", "sex", "disease"] 
+# tasks = ["cell_type", "tissue", "development_stage", "sex", "disease"] 
 # tasks = ["tissue_general", "sex", "disease"] # For testing
+tasks = ["tissue_general", "sex", "disease", "high_level_stage_name"]
 
+from flask import json
+tasks_file_path = "/data/horse/ws/jaew523d-large_ontix_project/gemini_celltype_tasks2.json"
+
+with open(tasks_file_path, "r") as f:
+	gemini_celltype_tasks2 = json.load(f)
+ 
+for task_name, cell_types in gemini_celltype_tasks2.items():
+	if task_name not in tasks:
+		tasks.append(task_name)
 
 file_processed = os.path.join(data_final_folder, "census-acxcontainer_tune.pkl")
 # file_processed = os.path.join(data_final_folder, "census-acxcontainer_train.pkl") ## Only for testing
@@ -77,7 +89,8 @@ def syne_trainer(
 
 		return acx_container
 
-	llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
+	# llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
+	llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/task-oriented/"
 	# llm_ontology_folder = "./data/llm_ontologies/final_ontologies/"
 	
 	file_pkl = data_path
@@ -145,23 +158,54 @@ def syne_trainer(
 		metric_regression = own_metric_regression, 
 		reference_methods = [], # No reference methods for tuning
 		split_type = "use-split",
-		n_downsample = int(acx_container.train.data.shape[0]*0.5), # Use a subset of the data for faster evaluation
+		top_k_classes = 20,
+  		# n_downsample = int(acx_container.train.data.shape[0]*0.5), # Use a subset of the data for faster evaluation
+		n_downsample = None, # Use a subset of the data for faster evaluation
+		exclude_classes = ["other"],
 	)
 
-	avg_mltask_performance = ontix.result.embedding_evaluation.loc[
-		ontix.result.embedding_evaluation.score_split == "valid",
+	## Average of cell type task starting with "Task*"
+	avg_celltype_performance = ontix.result.embedding_evaluation.loc[
+		(ontix.result.embedding_evaluation.score_split == "valid") &
+		(ontix.result.embedding_evaluation.ML_TASK.str.startswith("Task")),
 		"value"
 	].mean()
+	## Average of all other tasks
+	avg_other_performance = ontix.result.embedding_evaluation.loc[
+		(ontix.result.embedding_evaluation.score_split == "valid") &
+		(~ontix.result.embedding_evaluation.ML_TASK.str.startswith("Task")),
+		"value"
+	].mean()
+	
+	avg_mltask_performance = (avg_celltype_performance + avg_other_performance) / 2
 	valid_recon_loss = float(ontix.result.sub_losses.get("recon_loss").get(epoch=-1, split="valid"))
+ 
+	# Variance across tasks
+	var_celltype_performance = ontix.result.embedding_evaluation.loc[
+		(ontix.result.embedding_evaluation.score_split == "valid") &
+		(ontix.result.embedding_evaluation.ML_TASK.str.startswith("Task")),
+		"value"
+	].var()
+	var_other_performance = ontix.result.embedding_evaluation.loc[
+		(ontix.result.embedding_evaluation.score_split == "valid") &
+		(~ontix.result.embedding_evaluation.ML_TASK.str.startswith("Task")),
+		"value"
+	].var()
 
 	report = Reporter()
-	report(ml_performance=avg_mltask_performance, recon_loss=valid_recon_loss)
-
+	report(	ml_performance=avg_mltask_performance,
+        	recon_loss=valid_recon_loss,
+        	ml_perf_celltype=avg_celltype_performance,
+			ml_perf_other=avg_other_performance,
+			var_celltype_performance=var_celltype_performance,
+			var_other_performance=var_other_performance,
+			)
 ### Step 2 - Tuning #####
 
 
 # Hyperparameter configuration 
-epoch = 250  # For testing, reduce number of epochs
+# epoch = 250  # For testing, reduce number of epochs
+epoch = 10
 config_space = {
 	## Fixed params
 	"epochs": epoch,
