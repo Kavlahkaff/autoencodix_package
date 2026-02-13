@@ -167,13 +167,13 @@ def syne_trainer(
 	## Average of cell type task starting with "Task*"
 	avg_celltype_performance = ontix.result.embedding_evaluation.loc[
 		(ontix.result.embedding_evaluation.score_split == "valid") &
-		(ontix.result.embedding_evaluation.ML_TASK.str.startswith("Task")),
+		(ontix.result.embedding_evaluation.CLINIC_PARAM.str.startswith("Task")),
 		"value"
 	].mean()
 	## Average of all other tasks
 	avg_other_performance = ontix.result.embedding_evaluation.loc[
 		(ontix.result.embedding_evaluation.score_split == "valid") &
-		(~ontix.result.embedding_evaluation.ML_TASK.str.startswith("Task")),
+		(~ontix.result.embedding_evaluation.CLINIC_PARAM.str.startswith("Task")),
 		"value"
 	].mean()
 	
@@ -183,12 +183,12 @@ def syne_trainer(
 	# Variance across tasks
 	var_celltype_performance = ontix.result.embedding_evaluation.loc[
 		(ontix.result.embedding_evaluation.score_split == "valid") &
-		(ontix.result.embedding_evaluation.ML_TASK.str.startswith("Task")),
+		(ontix.result.embedding_evaluation.CLINIC_PARAM.str.startswith("Task")),
 		"value"
 	].var()
 	var_other_performance = ontix.result.embedding_evaluation.loc[
 		(ontix.result.embedding_evaluation.score_split == "valid") &
-		(~ontix.result.embedding_evaluation.ML_TASK.str.startswith("Task")),
+		(~ontix.result.embedding_evaluation.CLINIC_PARAM.str.startswith("Task")),
 		"value"
 	].var()
 
