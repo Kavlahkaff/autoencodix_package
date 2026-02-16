@@ -23,9 +23,13 @@ def keep_features_from_acxcontainer(acx_container, feature_ids_to_keep):
 
 	return acx_container
 
-data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
-llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
-results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/second_run_e250"
+data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data_taskRun/"
+# data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
+
+# llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
+llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/task-oriented/"
+
+results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/third_run_e250"
 
 ont_from_cli = sys.argv[1]  # "chatgpt_ontology__", "custom_ontology__"
 tuning_experiment_file = sys.argv[2]  # Name of tuning experiment pickle file
