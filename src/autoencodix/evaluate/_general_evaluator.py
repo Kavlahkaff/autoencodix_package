@@ -263,6 +263,7 @@ class GeneralEvaluator(BaseEvaluator):
                             task_param=task_param,
                             sklearn_ml=sklearn_ml,
                             metric=metric,
+                            ml_type=ml_type,
                             cv_folds=cv_folds,
                             top_k_classes=top_k_classes,
                             exclude_classes=exclude_classes,
@@ -275,6 +276,7 @@ class GeneralEvaluator(BaseEvaluator):
                             task_param=task_param,
                             sklearn_ml=sklearn_ml,
                             metric=metric,
+                            ml_type=ml_type,
                             cv_folds=len(df),
                             top_k_classes=top_k_classes,
                             exclude_classes=exclude_classes,
@@ -314,6 +316,7 @@ class GeneralEvaluator(BaseEvaluator):
         task_param: str,
         sklearn_ml: Union[ClassifierMixin, RegressorMixin],
         metric: str,
+        ml_type: str,
         cv_folds: int = 5,
         top_k_classes: Union[int, None] = 20,
         exclude_classes: Union[list, None] = None,
@@ -328,6 +331,7 @@ class GeneralEvaluator(BaseEvaluator):
             task_param: Column name with label data
             sklearn_ml: Sklearn ML module specifying the ML algorithm
             metric: string specifying the metric to be calculated by cross validation
+            ml_type: string specifying if this is a classification or regression task, used to determine which sklearn model and metric to use
             cv_folds: Number of cross validation folds
             top_k_classes: Number of top classes to keep, others combined into "other"
             exclude_classes: List of classes to exclude from evaluation (default: None)
@@ -343,26 +347,32 @@ class GeneralEvaluator(BaseEvaluator):
             df = df[~y.isin(exclude_classes)]
             y = y[~y.isin(exclude_classes)]
         score_df = dict()
+        # check if classification
+        if ml_type == "classification":
+            # Remove empty classes from y
+            y = y.cat.remove_unused_categories()
 
         ## Cross Validation
         if len(y.unique()) > 1:  # ty: ignore
             # Check that more samples per class than cv_folds
-            min_class_count = y.value_counts().min()  # ty: ignore
-            if min_class_count < cv_folds:
-                # Combine all classes with less than cv_folds samples into one class "other"
-                warnings.warn(
-                    f"Warning: For task parameter {task_param}, some classes have less samples ({min_class_count}) than the number of CV folds ({cv_folds}). Combining these classes into one class 'other' for evaluation."
-                )
-                y = y.apply(
-                    lambda x: x
-                    if clin_data[task_param].value_counts().loc[x] >= cv_folds
-                    else "other"
-                )
-            # Restrict number of classes to top k classes
-            if top_k_classes is not None: 
-                if len(y.unique()) > top_k_classes:                
-                    top_k_classes_list = y.value_counts().nlargest(top_k_classes).index
-                    y = y.apply(lambda x: x if x in top_k_classes_list else "other")
+            # print(y.value_counts())
+            if ml_type == "classification":
+                min_class_count = y.value_counts().min()  # ty: ignore
+                if min_class_count < cv_folds:
+                    # Combine all classes with less than cv_folds samples into one class "other"
+                    warnings.warn(
+                        f"Warning: For task parameter {task_param}, some classes have less samples ({min_class_count}) than the number of CV folds ({cv_folds}). Combining these classes into one class 'other' for evaluation."
+                    )
+                    y = y.apply(
+                        lambda x: x
+                        if clin_data[task_param].value_counts().loc[x] >= cv_folds
+                        else "other"
+                    )
+                # Restrict number of classes to top k classes
+                if top_k_classes is not None: 
+                    if len(y.unique()) > top_k_classes:                
+                        top_k_classes_list = y.value_counts().nlargest(top_k_classes).index
+                        y = y.apply(lambda x: x if x in top_k_classes_list else "other")
             scores = cross_validate(
                 sklearn_ml, df, y, cv=cv_folds, scoring=metric, return_train_score=True, n_jobs=-1
             )
