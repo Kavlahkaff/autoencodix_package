@@ -98,9 +98,15 @@ class GeneralTrainer(BaseTrainer):
 
         def make_tensor_buffer(size: int, dim: Union[int, Tuple[int, ...]]):
             if isinstance(dim, int):
-                return torch.zeros((size, dim), device=self.device)
+                if self._config.save_vram:
+                    return torch.zeros((size, dim), device="cpu")  # Move to CPU to avoid GPU OOM, but will be slower
+                else:
+                    return torch.zeros((size, dim), device=self.device)
             else:
-                return torch.zeros((size, *dim), device=self.device)
+                if self._config.save_vram:
+                    return torch.zeros((size, *dim), device="cpu")  # Move to CPU to avoid GPU OOM, but will be slower
+                else:
+                    return torch.zeros((size, *dim), device=self.device)
 
         def make_numpy_buffer(size: int):
             return np.empty((size,), dtype=object)
@@ -348,16 +354,24 @@ class GeneralTrainer(BaseTrainer):
 
         self._sample_ids_buffer[split][indices_np] = np.array(sample_ids)
 
-        self._latentspace_buffer[split][indices_np] = model_output.latentspace.detach()
-        self._reconstruction_buffer[split][
-            indices_np
-        ] = model_output.reconstruction.detach()
-
-        if model_output.latent_logvar is not None:
-            self._sigma_buffer[split][indices_np] = model_output.latent_logvar.detach()
-
-        if model_output.latent_mean is not None:
-            self._mu_buffer[split][indices_np] = model_output.latent_mean.detach()
+        if self._config.save_vram: # Move to CPU to avoid GPU OOM, but will be slower
+            self._latentspace_buffer[split][indices_np] = model_output.latentspace.cpu().detach() 
+            self._reconstruction_buffer[split][
+                indices_np
+            ] = model_output.reconstruction.cpu().detach() 
+            if model_output.latent_logvar is not None:
+                self._sigma_buffer[split][indices_np] = model_output.latent_logvar.cpu().detach()
+            if model_output.latent_mean is not None:
+                self._mu_buffer[split][indices_np] = model_output.latent_mean.cpu().detach() 
+        else:
+            self._latentspace_buffer[split][indices_np] = model_output.latentspace.detach()
+            self._reconstruction_buffer[split][
+                indices_np
+            ] = model_output.reconstruction.detach()
+            if model_output.latent_logvar is not None:
+                self._sigma_buffer[split][indices_np] = model_output.latent_logvar.detach()
+            if model_output.latent_mean is not None:
+                self._mu_buffer[split][indices_np] = model_output.latent_mean.detach()
 
     def _dynamics_to_result(self, epoch: int, split: str) -> None:
         """Transfers buffered dynamics to the Result object.
@@ -423,8 +437,11 @@ class GeneralTrainer(BaseTrainer):
         self._init_buffers(input_data=data)
         inference_loader = self._fabric.setup_dataloaders(inference_loader)  # type: ignore
         with self._fabric.autocast(), torch.inference_mode():
+            processed_samples = 0
             for idx, data, sample_ids in inference_loader:
                 model_output = model(data)
+                processed_samples += len(data)
+                print(f"Processed {processed_samples} / {self.n_test} samples", end="\r")
                 self._capture_dynamics(
                     model_output=model_output,
                     split="test",

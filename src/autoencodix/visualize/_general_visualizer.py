@@ -67,6 +67,7 @@ class GeneralVisualizer(BaseVisualizer):
             "2D-scatter", "Ridgeline", "Coverage-Correlation"
         ] = "2D-scatter",
         labels: Optional[Union[list, pd.Series, None]] = None,
+        focus_labels: Optional[Union[list, None]] = None,
         param: Optional[Union[list, str]] = None,
         epoch: Optional[Union[int, None]] = None,
         split: str = "all",
@@ -79,6 +80,7 @@ class GeneralVisualizer(BaseVisualizer):
             result: The result object containing latent spaces and losses.
             plot_type: The type of plot to generate. Options are "2D-scatter", "Ridgeline", and "Coverage-Correlation". Default is "2D-scatter".
             labels: List of labels for the data points in the latent space. Default is None.
+            focus_labels: List of labels which should be considered for coloring. All other labels are set to 'other'. Defaults to None where all labels are considered.
             param: List of parameters provided and stored as metadata. Strings must match column names. If not a list, string "all" is expected for convenient way to make plots for all parameters available. Default is None where no colored labels are plotted.
             epoch: The epoch number to visualize. If None, the last epoch is inferred from the losses. Default is None.
             split: The data split to visualize. Options are "train", "valid", "test", and "all". Default is "all".
@@ -331,40 +333,48 @@ class GeneralVisualizer(BaseVisualizer):
                     else:
                         embedding = df_latent
 
-                    self.plots["2D-scatter"][epoch][split][p] = self._plot_2D(
+                    fig = self._plot_2D(
                         embedding=embedding,
                         labels=labels,
+                        focus_labels=focus_labels,
                         param=p,
                         layer=f"2D latent space (epoch {epoch+1})",  # we start counting epochs at 0, so add 1 for display
                         figsize=(12, 8),
                         center=True,
                     )
-
-                    fig = self.plots["2D-scatter"][epoch][split][p]
+                    if focus_labels is None:
+                        self.plots["2D-scatter"][epoch][split][p] = fig
+                    else:
+                        focus_group = "group_" + str(len(self.plots["2D-scatter"][epoch][split][p+"_focus"].keys())+1)
+                        self.plots["2D-scatter"][epoch][split][p+"_focus"][focus_group] = fig
                     show_figure(fig)
                     plt.show()
 
                 if plot_type == "Ridgeline":
                     ## Make ridgeline plot
 
-                    self.plots["Ridgeline"][epoch][split][p] = self._plot_latent_ridge(
-                        lat_space=df_latent, labels=labels, param=p
+                    fig = self._plot_latent_ridge(
+                        lat_space=df_latent, labels=labels, focus_labels=focus_labels, param=p
                     )
-
-                    fig = self.plots["Ridgeline"][epoch][split][p].figure
-                    show_figure(fig)
+                    if focus_labels is None:
+                        self.plots["Ridgeline"][epoch][split][p] = fig
+                    else:
+                        focus_group = "group_" + str(len(self.plots["Ridgeline"][epoch][split][p+"_focus"].keys())+1)
+                        self.plots["Ridgeline"][epoch][split][p+"_focus"][focus_group] = fig
+                    show_figure(fig.figure)
                     plt.show()
 
                 if plot_type == "Clustermap":
                     ## Make clustermap plot
 
-                    self.plots["Clustermap"][epoch][split][p] = (
-                        self._plot_latent_clustermap(
-                            lat_space=df_latent, labels=labels, param=p
+                    fig = self._plot_latent_clustermap(
+                            lat_space=df_latent, labels=labels, focus_labels=focus_labels, param=p
                         )
-                    )
-
-                    fig = self.plots["Clustermap"][epoch][split][p]
+                    if focus_labels is None:
+                        self.plots["Clustermap"][epoch][split][p] = fig
+                    else:
+                        focus_group = "group_" + str(len(self.plots["Clustermap"][epoch][split][p+"_focus"].keys())+1)
+                        self.plots["Clustermap"][epoch][split][p+"_focus"][focus_group] = fig
                     show_figure(fig)
                     plt.show()
 
@@ -392,6 +402,7 @@ class GeneralVisualizer(BaseVisualizer):
     def _plot_2D(
         embedding: pd.DataFrame,
         labels: list,
+        focus_labels: Optional[Union[list, None]] = None,
         param: Optional[Union[str, None]] = None,
         layer: str = "latent space",
         figsize: tuple = (24, 15),
@@ -407,6 +418,7 @@ class GeneralVisualizer(BaseVisualizer):
         Args:
             embedding: DataFrame containing the 2D embedding coordinates.
             labels: List of labels corresponding to each point in the embedding.
+            focus_labels: List of labels which should be considered for coloring. All other labels are set to 'other'. Defaults to None where all labels are considered.
             param: Title for the legend. Defaults to None.
             layer: Title for the plot. Defaults to "latent space".
             figsize: Size of the figure. Defaults to (24, 15).
@@ -446,8 +458,6 @@ class GeneralVisualizer(BaseVisualizer):
             else:
                 labels = [str(x) for x in labels]
 
-        fig, ax1 = plt.subplots(figsize=figsize)
-
         # check if label or embedding is longerm and duplicate the shorter one
         if len(labels) < embedding.shape[0]:
             print(
@@ -460,7 +470,28 @@ class GeneralVisualizer(BaseVisualizer):
             ]
         elif len(labels) > embedding.shape[0]:
             labels = list(set(labels))
+        
+        if len(np.unique(labels)) > 20 and focus_labels is None:
+            warnings.warn(
+                f"The provided label column has {len(np.unique(labels))} unique labels which might make the scatter plot unclear."
+            )
+            # Restrict to top 20 labels
+            focus_labels = pd.Series(labels).value_counts().nlargest(20).index.tolist()
+            print(f"Focusing on top 20 labels instead")
 
+        if focus_labels is not None:
+            labels = [
+                label if label in focus_labels else "other" for label in labels
+            ]
+        
+        # Increase figure size width if legend has has more than 10 labels (two columns)
+        if len(np.unique(labels)) > 10:
+            figsize = (figsize[0] * 1.5, figsize[1])
+        # Increase figure size width if legend labels are very long
+        max_label_length = max([len(str(label)) for label in np.unique(labels)])
+        figsize = (int(figsize[0] + max_label_length * 0.2), figsize[1])
+
+        fig, ax2 = plt.subplots(1, 1, figsize=figsize)
         if numeric:
             ax2 = sns.scatterplot(
                 x=embedding.iloc[:, 0],
@@ -476,14 +507,31 @@ class GeneralVisualizer(BaseVisualizer):
                 cat_pal = sns.color_palette("tab20", n_colors=len(np.unique(labels)))
             else:
                 cat_pal = sns.color_palette("tab10", n_colors=len(np.unique(labels)))
+            
+            if "other" in np.unique(labels):
+                # set color of "other" to light grey
+                other_color = (0.3, 0.3, 0.3)
+                cat_pal[list(np.unique(labels)).index("other")] = other_color
+            
+            # Adjust alpha depending on number of points
+            if len(labels) > 10000:
+                point_alpha = 0.2
+                point_size = 10
+            elif len(labels) > 5000:
+                point_alpha = 0.4
+                point_size = 20
+            else:
+                point_alpha = 0.7
+                point_size = 40
+
             ax2 = sns.scatterplot(
                 x=embedding.iloc[:, 0],
                 y=embedding.iloc[:, 1],
                 hue=labels,
                 hue_order=np.unique(labels),
                 palette=cat_pal,
-                s=40,
-                alpha=0.5,
+                s=point_size,
+                alpha=point_alpha,
                 ec="black",
             )
         if center:
@@ -497,7 +545,7 @@ class GeneralVisualizer(BaseVisualizer):
                 palette=cat_pal,
                 s=200,
                 ec="black",
-                alpha=0.9,
+                alpha=0.7,
                 marker="*",
                 legend=False,
                 ax=ax2,
@@ -532,6 +580,7 @@ class GeneralVisualizer(BaseVisualizer):
 
         # Add title to the plot
         ax2.set_title(layer)
+        plt.tight_layout()
 
         plt.close()
         return fig
@@ -540,6 +589,7 @@ class GeneralVisualizer(BaseVisualizer):
     def _plot_latent_clustermap(
         lat_space: pd.DataFrame,
         labels: Optional[Union[list, pd.Series, None]] = None,
+        focus_labels: Optional[Union[list, None]] = None,
         param: Optional[Union[str, None]] = None,
     ) -> matplotlib.figure.Figure:
         """Creates a clustermap of the latent space dimension where each row shows the intensity of a latent dimension and columns are clustered.
@@ -547,10 +597,24 @@ class GeneralVisualizer(BaseVisualizer):
         Args:
             lat_space: DataFrame containing the latent space intensities for samples (rows) and latent dimensions (columns)
             labels: List of labels for each sample. If None, all samples are considered as one group.
+            focus_labels: List of labels which should be considered for coloring. All other labels are set to 'other'. Defaults to None where all labels are considered.
             param: Clinical parameter to create groupings and coloring of ridges. Must be a column name (str) of clin_data
         Returns:
             fig: Figure object containing the clustermap
         """
+        if len(np.unique(labels)) > 50 and focus_labels is None:
+            warnings.warn(
+                f"The provided label column has {len(np.unique(labels))} unique labels which might make the clustermap plot too big."
+            )
+            # Restrict to top 50 labels
+            focus_labels = pd.Series(labels).value_counts().nlargest(50).index.tolist()
+            print(f"Focusing on top 50 labels instead")
+
+        if focus_labels is not None:
+            labels = [
+                label if label in focus_labels else "other" for label in labels
+            ]
+
         lat_space[param] = labels
 
         cluster_figure = sns.clustermap(
@@ -572,6 +636,7 @@ class GeneralVisualizer(BaseVisualizer):
     def _plot_latent_ridge(
         lat_space: pd.DataFrame,
         labels: Optional[Union[list, pd.Series, None]] = None,
+        focus_labels: Optional[Union[list, None]] = None,
         param: Optional[Union[str, None]] = None,
     ) -> sns.FacetGrid:
         """Creates a ridge line plot of latent space dimension where each row shows the density of a latent dimension and groups (ridges).
@@ -579,6 +644,7 @@ class GeneralVisualizer(BaseVisualizer):
         Args:
             lat_space: DataFrame containing the latent space intensities for samples (rows) and latent dimensions (columns)
             labels: List of labels for each sample. If None, all samples are considered as one group.
+            focus_labels: List of labels which should be considered for coloring. All other labels are set to 'other'. Defaults to None where all labels are considered.
             param: Clinical parameter to create groupings and coloring of ridges. Must be a column name (str) of clin_data
         Returns:
             g: FacetGrid object containing the ridge line plot
@@ -609,6 +675,19 @@ class GeneralVisualizer(BaseVisualizer):
             else:
                 labels = [str(x) for x in labels]
 
+        if len(np.unique(labels)) > 20 and focus_labels is None:
+            warnings.warn(
+                f"The provided label column has {len(np.unique(labels))} unique labels which might make the ridgeline plot unclear."
+            )
+            # Restrict to top 20 labels
+            focus_labels = pd.Series(labels).value_counts().nlargest(20).index.tolist()
+            print(f"Focusing on top 20 labels instead")
+            
+        if focus_labels is not None:
+            labels = [
+                label if label in focus_labels else "other" for label in labels
+            ]
+        
         df[param] = len(lat_space.columns) * labels  # type: ignore
 
         exclude_missing_info = (df[param] == "unknown") | (df[param] == "nan")
@@ -636,11 +715,19 @@ class GeneralVisualizer(BaseVisualizer):
         else:
             cat_pal = sns.color_palette("tab10", n_colors=len(labels))
 
+        if "other" in np.unique(labels):
+            # set color of "other" to light grey
+            other_color = (0.3, 0.3, 0.3)
+            cat_pal[list(np.unique(labels)).index("other")] = other_color
+
+        # Length of longest latent dim string for aspect ratio
+        len_longest_latent_dim = max([len(str(x)) for x in lat_space.columns])
+
         g = sns.FacetGrid(
             df[~exclude_missing_info],
             row="latent dim",
             hue=param,
-            aspect=12,
+            aspect=12+len_longest_latent_dim/4,
             height=0.8,
             xlim=(xmin.iloc[0], xmax.iloc[0]),
             palette=cat_pal,
