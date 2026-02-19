@@ -1266,7 +1266,7 @@ class BasePipeline(abc.ABC):
 
         if llm_explain:
             gene_attributions: Dict[str, List] = preprocess_explanations(
-                df_attributions
+                df=df_attributions, n=top_n_genes, max_dims=8
             )
             if len(gene_attributions) > 8:
                 warnings.warn(

@@ -81,10 +81,14 @@ class FeatureImportanceExplainer:
             avg_abs_attributions = attributions.abs().mean(dim=0)
             all_attr.append(avg_abs_attributions.detach().cpu())
         attr_matrix = torch.stack(all_attr).T.numpy()
+        if hasattr(self.model, "ontologies") and self.model.ontologies is not None:
+            cols = list(self.model.ontologies[0].keys())
+        else:
+            cols = [f"Latent_Dim_{i}" for i in range(self.latent_dim)]
         df_attributions = pd.DataFrame(
             attr_matrix,
             index=list(gene_names),
-            columns=[f"latent_dimension_{i}" for i in range(self.latent_dim)],
+            columns=cols,
         )
 
         return df_attributions

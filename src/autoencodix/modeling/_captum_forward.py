@@ -11,7 +11,8 @@ class CaptumForward(nn.Module):
         self.dim = dim
 
     def forward(self, x: torch.Tensor):
-        mp: ModelOutput = self.model(x=x)
+        device = self.model.config.device
+        mp: ModelOutput = self.model(x=x.to(device))
         latent = mp.latentspace
         output = latent[:, self.dim]
-        return output.unsqueeze(1)
+        return output.unsqueeze(1).to('cpu')
