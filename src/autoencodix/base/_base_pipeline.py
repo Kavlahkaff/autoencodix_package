@@ -1198,9 +1198,12 @@ class BasePipeline(abc.ABC):
     def explain(
         self,
         method: Literal["DeepLiftShap", "IntegratedGradients"] = "DeepLiftShap",
-        baseline_type: Literal["mean", "random_sample"] = "mean",
+        sel_latent_dim: Union[list, int, str, None] = None,
+        input_type: Literal["random", "grouped"] = "grouped",
+        input_group: Optional[str] = None,
+        baseline_type: Literal["mean", "random", "grouped"] = "mean",
         baseline_group: str = "all",
-        obs_col: Optional[str] = None,
+        anno_col: Optional[str] = None,
         n_subset: int = 100,
         seed_int: int = 12,
         split: Literal["train", "test", "valid"] = "train",
@@ -1214,9 +1217,12 @@ class BasePipeline(abc.ABC):
 
         Args:
             method:  Specifies which attribution algorithm to use for explaining the model.
-            baseline_type: Specifies whether the feature-importance algorithm should use the mean baseline or a random-sample baseline.
-            baseline_group: Specifies whether the baseline is computed using all data (default) or which subset in obs_col to filter for.
-            obs_col: If baseline_group is not 'all', this specifies the observation column used to filter the baseline data.
+            sel_latent_dim: Specifies which latent dimension(s) to explain. If None, all dimensions will be explained.
+            input_type: Specifies whether the feature-importance algorithm should use 'random' samples or 'grouped' samples (see input_group) as input for the attribution computation.
+            input_group: If input_type is 'grouped', this specifies which subset in anno_col to filter for to use as input for the attribution computation.
+            baseline_type: Specifies whether the feature-importance algorithm should use the 'mean' baseline, a 'random'-sample baseline, or samples from a 'grouped' baseline (see baseline_group).
+            baseline_group: Specifies whether the baseline is computed using all data (default) or which subset in anno_col to filter for.
+            anno_col: If baseline_group is not 'all', this specifies the annotation column used to filter the baseline data.
             n_subset: Specifies the number of cells to use when subsampling for the attribution computation.
             seed_int: Defines the random seed used for reproducible subsampling and attribution calculations.
             split: The split to use for feature importance calculation (train, valid, test), default is train.
@@ -1252,14 +1258,66 @@ class BasePipeline(abc.ABC):
                 "This happens if you used .save and .load, and did not run .fit before."
                 "This can also happen if you run .explain before .fit."
             )
+        # Validate sel_latent_dim and convert from string to int if necessary
+        if sel_latent_dim is not None:
+            if isinstance(sel_latent_dim, str):
+                if self.ontologies is None:
+                    raise ValueError(
+                        "sel_latent_dim is a string, but no ontologies are available in the pipeline. Please provide ontologies in the config or set sel_latent_dim to an int or list of ints."
+                    )
+                if sel_latent_dim not in self.ontologies[0].keys():
+                    raise ValueError(
+                        f"sel_latent_dim is set to '{sel_latent_dim}', but this is not a key in the available ontologies: {list(self.ontologies[0].keys())}. Please provide a valid ontology key or set sel_latent_dim to an int or list of ints."
+                    )
+                sel_latent_dim = list(self.ontologies[0].keys()).index(sel_latent_dim)  
+            elif isinstance(sel_latent_dim, int):
+                if sel_latent_dim < 0 or sel_latent_dim >= self.config.latent_dim:
+                    raise ValueError(
+                        f"sel_latent_dim is set to {sel_latent_dim}, but this is out of bounds for the latent dimension size of {self.config.latent_dim}. Please provide a valid integer index or set sel_latent_dim to None to explain all dimensions."
+                    )
+            elif isinstance(sel_latent_dim, list):
+                # Check if entries are strings or integers and validate accordingly
+                sel_latent_dim_validated = []
+                for dim in sel_latent_dim:
+                    if isinstance(dim, str):
+                        if self.ontologies is None:
+                            raise ValueError(
+                                "sel_latent_dim is a list of strings, but no ontologies are available in the pipeline. Please provide ontologies in the config or set sel_latent_dim to a list of ints."
+                            )
+                        if dim not in self.ontologies[0].keys():
+                            raise ValueError(
+                                f"sel_latent_dim contains '{dim}', but this is not a key in the available ontologies: {list(self.ontologies[0].keys())}. Please provide valid ontology keys or set sel_latent_dim to a list of ints."
+                            )
+                        sel_latent_dim_validated.append(list(self.ontologies[0].keys()).index(dim))
+                    elif isinstance(dim, int):
+                        if dim < 0 or dim >= self.config.latent_dim:
+                            raise ValueError(
+                                f"sel_latent_dim contains {dim}, but this is out of bounds for the latent dimension size of {self.config.latent_dim}. Please provide valid integer indices or set sel_latent_dim to None to explain all dimensions."
+                            )
+                        sel_latent_dim_validated.append(dim)
+                    else:
+                        raise ValueError(
+                            f"sel_latent_dim list contains entries of type {type(dim)}, but only str and int are allowed. Please ensure all entries are either strings corresponding to ontology keys or integers corresponding to latent dimension indices."
+                        )
+                sel_latent_dim = sel_latent_dim_validated
+            else:
+                raise ValueError(
+                    f"sel_latent_dim must be either an int, a str, a list of ints or a list of strs, got {type(sel_latent_dim)}. Please provide a valid type for sel_latent_dim."
+                )
+   
+            
         explainer = FeatureImportanceExplainer(
             adata=adata["global"],
             model=model,
             n_subset=n_subset,
             method=method,
-            baseline_group=baseline_group,
-            obs_col=obs_col,
+            sel_latent_dim=sel_latent_dim,
+            input_type=input_type,
+            input_group=input_group,
             baseline_type=baseline_type,
+            baseline_group=baseline_group,
+            anno_col=anno_col,
+            
             seed_int=seed_int,
         )
         df_attributions = explainer.explain()
