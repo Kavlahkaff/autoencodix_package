@@ -9,10 +9,10 @@ class CaptumForward(nn.Module):
         super(CaptumForward, self).__init__()  # <-- REQUIRED
         self.model = model  # (Registered as a submodule)
         self.dim = dim
+        self.device = next(model.parameters()).device  # Get the device of the model parameters
 
     def forward(self, x: torch.Tensor):
-        device = self.model.config.device
-        mp: ModelOutput = self.model(x=x.to(device))
+        mp: ModelOutput = self.model(x=x.to(self.device))
         latent = mp.latentspace
         output = latent[:, self.dim]
         return output.unsqueeze(1).to('cpu')

@@ -13,7 +13,8 @@ from syne_tune.experiments import load_experiment
 # data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data/"
 data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data_taskRun/"
 
-results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/third_run_e250/"
+# results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/third_run_e250/"
+results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/fourth_run_e250/"
 # results_folder = "./results/large_ontix_save/testing/"
 
 # Create results_folder if it doesn't exist
