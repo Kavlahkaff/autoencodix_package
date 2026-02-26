@@ -29,7 +29,7 @@ data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data_t
 # llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
 llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/task-oriented/"
 
-results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/third_run_e250"
+results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/fourth_run_e250"
 
 ont_from_cli = sys.argv[1]  # "chatgpt_ontology__", "custom_ontology__"
 tuning_experiment_file = sys.argv[2]  # Name of tuning experiment pickle file
