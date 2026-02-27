@@ -25,7 +25,7 @@ import pandas as pd
 # data_final_folder = "/home/ewald/Github/autoencodix_package/results/large_ontix_save/third_run_e250/"
 data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data_taskRun/"
 
-results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/third_run_e250"
+results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/fourth_run_e250"
 # results_folder = "/home/ewald/Github/autoencodix_package/results/large_ontix_save/third_run_e250/"
 
 llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/task-oriented/"
