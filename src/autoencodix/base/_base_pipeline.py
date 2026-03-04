@@ -894,6 +894,7 @@ class BasePipeline(abc.ABC):
         metric_class: str = "roc_auc_ovo",  # Default is 'roc_auc_ovo' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
         metric_regression: str = "r2",  # Default is 'r2'
         reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
+        reference_reducer: dict = {}, # Option to provide pre-fitted reducer objects for PCA, UMAP or TSNE, e.g. {"PCA": pca_reducer, "UMAP": umap_reducer, "TSNE": tsne_reducer}
         split_type: Literal[
             "use-split", "CV-5", "LOOC"
         ] = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
@@ -953,6 +954,7 @@ class BasePipeline(abc.ABC):
             metric_class=metric_class,
             metric_regression=metric_regression,
             reference_methods=reference_methods,
+            reference_reducer=reference_reducer,
             split_type=split_type,
             n_downsample=n_downsample,
             top_k_classes=top_k_classes,

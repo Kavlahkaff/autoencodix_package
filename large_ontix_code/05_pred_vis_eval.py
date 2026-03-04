@@ -34,6 +34,7 @@ llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontolog
 ont_from_cli = sys.argv[1]  # "chatgpt_ontology__", "custom_ontology__"
 
 file_holdout = os.path.join(data_final_folder, f"census-acxcontainer_holdout.pkl")
+file_tuning = os.path.join(data_final_folder, f"census-acxcontainer_tune.pkl")
 final_ontix_model_file = os.path.join(results_folder, f"large_ontix_final_model_{ont_from_cli}.pkl")
 
 
@@ -41,10 +42,6 @@ final_ontix_model_file = os.path.join(results_folder, f"large_ontix_final_model_
 import pickle
 import autoencodix as acx
 # from autoencodix.configs.ontix_config import OntixConfig
-
-print("Loading holdout data ...")
-with open(file_holdout, "rb") as f:
-	acx_container = pickle.load(f)
 
 print("Preparing holdout data for feature size per ontology ...")
 ont_files = [
@@ -56,7 +53,30 @@ ont_files = [
 ont_lvl2 = pd.read_csv(ont_files[1], sep='\t', usecols=[0], header=None)
 ont_lvl2.columns = ['feature_id']
 
+print("Loading tune set to pre-fit PCA reducer ...")
+with open(file_tuning, "rb") as f:
+	acx_container = pickle.load(f) # Later overwritten to save RAM
+
 acx_container = keep_features_from_acxcontainer(acx_container, ont_lvl2['feature_id'].values)
+## Pre-fit PCA reducer 
+from sklearn.decomposition import PCA
+
+dim = int(ont_from_cli.split("_")[0].replace("Dim", ""))
+
+pca = PCA(n_components=dim)
+pca.fit(df_input)
+
+# Save the pre-fitted PCA reducer as pickle 
+pca_reducer_file = os.path.join(results_folder, f"{ont_from_cli}pca_reducer.pkl")
+with open(pca_reducer_file, "wb") as f:
+	pickle.dump(pca, f)
+
+print("Loading holdout data ...")
+with open(file_holdout, "rb") as f:
+	acx_container = pickle.load(f)
+
+acx_container = keep_features_from_acxcontainer(acx_container, ont_lvl2['feature_id'].values)
+
 
 # #####  Expand metadata with cell type tasks ###################
 from flask import json
@@ -248,6 +268,7 @@ loaded_ontix.evaluate(
 		metric_class = own_metric_class, 
 		metric_regression = own_metric_regression, 
 		reference_methods = ["PCA"], # No reference methods for tuning
+		reference_reducer = {"PCA": pca}, # Use the pre-fitted PCA reducer for the reference method
 		split_type = "CV-3",
 		top_k_classes = 20,
   		# n_downsample = int(acx_container.train.data.shape[0]*0.5), # Use a subset of the data for faster evaluation
@@ -272,6 +293,7 @@ loaded_ontix.evaluate(
 		metric_class = own_metric_class, 
 		metric_regression = own_metric_regression, 
 		reference_methods = ["PCA"], # No reference methods for tuning
+		reference_reducer = {"PCA": pca}, # Use the pre-fitted PCA reducer for the reference method
 		split_type = "CV-3",
 		top_k_classes = 20,
   		# n_downsample = int(acx_container.train.data.shape[0]*0.5), # Use a subset of the data for faster evaluation
