@@ -64,7 +64,7 @@ from sklearn.decomposition import PCA
 dim = int(ont_from_cli.split("_")[0].replace("Dim", ""))
 
 pca = PCA(n_components=dim)
-pca.fit(df_input)
+pca.fit(acx_container.test._to_df())
 
 # Save the pre-fitted PCA reducer as pickle 
 pca_reducer_file = os.path.join(results_folder, f"{ont_from_cli}pca_reducer.pkl")
