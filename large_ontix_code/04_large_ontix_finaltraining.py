@@ -29,7 +29,8 @@ data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data_t
 # llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
 llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/task-oriented/"
 
-results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/fourth_run_e250"
+results_folder_tuning = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/fourth_run_e250/"
+results_folder_save = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/fourth_run_e250_lowLR/"
 
 ont_from_cli = sys.argv[1]  # "chatgpt_ontology__", "custom_ontology__"
 tuning_experiment_file = sys.argv[2]  # Name of tuning experiment pickle file
@@ -43,7 +44,7 @@ ont_files = [
 	]
 
 #### Step 1 - Load best hyperparameters from tuning experiment #####
-with open(os.path.join(results_folder, tuning_experiment_file), "rb") as f:
+with open(os.path.join(results_folder_tuning, tuning_experiment_file), "rb") as f:
 	tuning_experiment = pickle.load(f)
 best_hyperparams = tuning_experiment.best_config()
 
@@ -69,7 +70,7 @@ scconfig = OntixConfig(
 	enc_factor= best_hyperparams['config_enc_factor'],
 	weight_decay= best_hyperparams['config_weight_decay'],
 	beta= best_hyperparams['config_beta'],
-	learning_rate= best_hyperparams['config_learning_rate'],
+	learning_rate= best_hyperparams['config_learning_rate']*0.1, # Reduce LR for testing
 	n_layers= best_hyperparams['config_n_layers'],
 	save_vram=True,
 	save_memory=True,
@@ -89,6 +90,6 @@ ontix.fit()
 print("Visualizing losses ...")
 ontix.visualize()
 print("Saving plots ...")
-ontix.visualizer.save_plots(os.path.join(results_folder, f"large_ontix_final_model_{ont_from_cli}_plots/"))
+ontix.visualizer.save_plots(os.path.join(results_folder_save, f"large_ontix_final_model_{ont_from_cli}_plots/"))
 print("Training finished, saving model ...")
-ontix.save(os.path.join(results_folder, f"large_ontix_final_model_{ont_from_cli}.pkl"), save_all=False)
+ontix.save(os.path.join(results_folder_save, f"large_ontix_final_model_{ont_from_cli}.pkl"), save_all=False)
