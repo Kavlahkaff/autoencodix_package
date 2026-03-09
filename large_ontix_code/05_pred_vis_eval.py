@@ -251,10 +251,10 @@ tasks = list(gemini_celltype_tasks2.keys()) + ["tissue_general", "sex", "disease
 sklearn.set_config(enable_metadata_routing=True)
 
 sklearn_ml_class = linear_model.LogisticRegression(
-							solver="sag",
+							solver="saga",
 							n_jobs=-1,
 							class_weight="balanced",
-							max_iter=200,
+							max_iter=500,
 ) 
 
 sklearn_ml_regression = linear_model.LinearRegression() ## Unused, only classification tasks
