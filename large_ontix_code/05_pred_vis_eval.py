@@ -273,7 +273,7 @@ loaded_ontix.evaluate(
 		top_k_classes = 20,
   		# n_downsample = int(acx_container.train.data.shape[0]*0.5), # Use a subset of the data for faster evaluation
 		n_downsample = None, # Use a subset of the data for faster evaluation
-		exclude_classes = ["other"],
+		exclude_classes = ["other", "unknown"],
 	)
 
 # Test RandomForest as additional model for evaluation
@@ -298,7 +298,7 @@ loaded_ontix.evaluate(
 		top_k_classes = 20,
   		# n_downsample = int(acx_container.train.data.shape[0]*0.5), # Use a subset of the data for faster evaluation
 		n_downsample = None, # Use a subset of the data for faster evaluation
-		exclude_classes = ["other"],
+		exclude_classes = ["other", "unknown"],
 )
 
 #### Step 4 - Save ####
