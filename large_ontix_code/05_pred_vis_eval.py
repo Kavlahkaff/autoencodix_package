@@ -278,11 +278,11 @@ loaded_ontix.evaluate(
 
 # Test RandomForest as additional model for evaluation
 sklearn_ml_class = RandomForestClassifier(
-							n_estimators=50,
+							n_estimators=100,
 							n_jobs=-1,
 							# min_samples_split=100,
-							max_depth=4,
-							min_samples_leaf=5,
+							max_depth=8,
+							min_samples_leaf=4,
 							class_weight="balanced",
 )
 
