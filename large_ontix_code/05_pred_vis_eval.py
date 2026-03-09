@@ -25,7 +25,7 @@ import pandas as pd
 # data_final_folder = "/home/ewald/Github/autoencodix_package/results/large_ontix_save/third_run_e250/"
 data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data_taskRun/"
 
-results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/fourth_run_e250"
+results_folder = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/fourth_run_e250_lowLR/"
 # results_folder = "/home/ewald/Github/autoencodix_package/results/large_ontix_save/third_run_e250/"
 
 llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/task-oriented/"
@@ -302,6 +302,8 @@ loaded_ontix.evaluate(
 )
 
 #### Step 4 - Save ####
+# Save latent embeddings as dataframe
+loaded_ontix.result.get_latent_df(epoch=-1, split='test').to_parquet(os.path.join(results_folder, f"holdout_latent_{ont_from_cli}.parquet"))
 
 # Save plots
 path_plots = os.path.join(results_folder, f"large_ontix_holdout_{ont_from_cli}_plots/")
