@@ -4,7 +4,7 @@ def random_log(min_val, max_val):
     u = random.random()
     return math.exp(math.log(min_val) + u * (math.log(max_val) - math.log(min_val)))
 
-def sample_hyperparams(config_path="/data/horse/ws/luth474h-autoencodix_synetune/autoencodix_package/benchmarking/configs/search_space.yaml", architecture=None):
+def sample_hyperparams(config_path="/data/cat/ws/luth474h-autoencodix_hpo/autoencodix_package/benchmarking/configs/search_space.yaml", architecture=None):
     yaml_cfg = yaml.safe_load(open(config_path))  # keep full config
 
     cfg = {

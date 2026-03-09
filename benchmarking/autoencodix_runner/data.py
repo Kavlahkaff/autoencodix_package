@@ -3,17 +3,17 @@ from autoencodix.configs.default_config import DataConfig, DataInfo
 
 #tcga dataset files
 tcga_files = {
-    "METH": "/data/horse/ws/luth474h-autoencodix_synetune/data/data_methylation_per_gene_formatted.parquet",
-    "RNA": "/data/horse/ws/luth474h-autoencodix_synetune/data/data_mrna_seq_v2_rsem_formatted.parquet",
-    "DNA": "/data/horse/ws/luth474h-autoencodix_synetune/data/data_combi_MUT_CNA_formatted.parquet",
-    "CLIN": "/data/horse/ws/luth474h-autoencodix_synetune/data/data_clinical_formatted.parquet",
+    "METH": "/data/cat/ws/luth474h-autoencodix_hpo/data/data_methylation_per_gene_formatted.parquet",
+    "RNA": "/data/cat/ws/luth474h-autoencodix_hpo/data/data_mrna_seq_v2_rsem_formatted.parquet",
+    "DNA": "/data/cat/ws/luth474h-autoencodix_hpo/data/data_combi_MUT_CNA_formatted.parquet",
+    "CLIN": "/data/cat/ws/luth474h-autoencodix_hpo/data/data_clinical_formatted.parquet",
 }
 
 #schc dataset files
 schc_files = {
-    "METH": "/data/horse/ws/luth474h-autoencodix_synetune/data/scATAC_human_cortex_formatted.parquet",
-    "RNA": "/data/horse/ws/luth474h-autoencodix_synetune/data/scRNA_human_cortex_formatted.parquet",
-    "CLIN": "/data/horse/ws/luth474h-autoencodix_synetune/data/scATAC_human_cortex_clinical_formatted.parquet",
+    "METH": "/data/cat/ws/luth474h-autoencodix_hpo/data/scATAC_human_cortex_formatted.parquet",
+    "RNA": "/data/cat/ws/luth474h-autoencodix_hpo/data/scRNA_human_cortex_formatted.parquet",
+    "CLIN": "/data/cat/ws/luth474h-autoencodix_hpo/data/scATAC_human_cortex_clinical_formatted.parquet",
 }
 
 

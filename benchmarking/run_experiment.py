@@ -42,7 +42,7 @@ logger = setup_logging()
 def load_ontology_paths(dataset, ontology_name):
     cfg = yaml.safe_load(
         open(
-            "/data/horse/ws/luth474h-autoencodix_synetune/"
+            "/data/cat/ws/luth474h-autoencodix_hpo/"
             "autoencodix_package/benchmarking/configs/ontologies.yaml"
         )
     )
@@ -58,14 +58,14 @@ def load_ontology_paths(dataset, ontology_name):
 def get_epochs():
     cfg = yaml.safe_load(
         open(
-            "/data/horse/ws/luth474h-autoencodix_synetune/"
+            "/data/cat/ws/luth474h-autoencodix_hpo/"
             "autoencodix_package/benchmarking/configs/search_space.yaml"
         )
     )
     return cfg["fixed"]["epochs"]
 
 
-def construct_output_path(job, base_dir="/data/horse/ws/luth474h-autoencodix_synetune/autoencodix_results"):
+def construct_output_path(job, base_dir="/data/cat/ws/luth474h-autoencodix_hpo/autoencodix_results"):
     """
     Construct output directory matching batch structure:
     base_dir/architecture/dataset/modality/[ontology/]seed_X/
@@ -145,7 +145,7 @@ def run_job(config_path):
     # Instead of result = model.run(), call the steps individually with logs:
     model.run()
     runtime_sec = time.perf_counter() - start_time
-    result = model.result
+    result = model.visualizer._make_loss_format(model.result, data_config)
     logger.info("Model run finished")
 
     # 5. Evaluate
@@ -192,9 +192,8 @@ def run_job(config_path):
     with open(output_path, "w") as f:
         json.dump(results, f, indent=4, default=json_numpy_serializer)
     
-    pkl_path = result_dir / f"{job['run_id']}_full_object.pkl"
-    with open(pkl_path, "wb") as f:
-        pickle.dump(result, f)
+    result_df_path = result_dir / f"{job['run_id']}_result_df.parquet"
+    result.to_parquet(result_df_path)
     logger.info("Finished successfully. Results saved to %s", output_path)
 
 # -----------------------------------------------------------------------------

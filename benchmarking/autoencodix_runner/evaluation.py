@@ -26,6 +26,6 @@ def evaluate(model, tasks, epochs):
     ].mean()
     valid_recon_loss = float(model.result.sub_losses.get("recon_loss").get(epoch=-1, split="valid"))
     loss_per_epoch = {}
-    for epoch in range(1,epochs+1):
+    for epoch in range(0,epochs):
         loss_per_epoch[epoch] = model.result.sub_losses.get("recon_loss").get(epoch=epoch, split="valid")
     return avg_mltask_performance, valid_recon_loss, loss_per_epoch

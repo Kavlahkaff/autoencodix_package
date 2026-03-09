@@ -3,7 +3,7 @@ from autoencodix_runner.hyperparams import random_log
 import random
 
 def load_results(path: str) -> pd.DataFrame:
-    base_path = "/data/horse/ws/luth474h-autoencodix_synetune/data/ralf_hpo_results/ae_results_30000_runs/"
+    base_path = "/data/cat/ws/luth474h-autoencodix_hpo/data/ralf_hpo_results/ae_results_30000_runs/"
     return pd.read_parquet(base_path+path)
 
 
