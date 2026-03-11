@@ -30,7 +30,7 @@ data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data_t
 llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/task-oriented/"
 
 results_folder_tuning = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/fourth_run_e250/"
-results_folder_save = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/fourth_run_e250_lowLR/"
+results_folder_save = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/fourth_run_e500_lowLR/"
 
 ont_from_cli = sys.argv[1]  # "chatgpt_ontology__", "custom_ontology__"
 tuning_experiment_file = sys.argv[2]  # Name of tuning experiment pickle file
@@ -60,7 +60,7 @@ acx_container = keep_features_from_acxcontainer(acx_container, ont_lvl2['feature
 
 scconfig = OntixConfig(
 	## Fixed params
-	epochs=best_hyperparams['config_epochs'],
+	epochs=best_hyperparams['config_epochs']*2,	# Double epochs for reduced LR
 	# epochs=5, # Reduce for testing
 	checkpoint_interval= best_hyperparams['config_checkpoint_interval'],
 	loss_reduction= best_hyperparams['config_loss_reduction'],
