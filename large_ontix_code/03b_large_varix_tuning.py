@@ -206,8 +206,8 @@ def syne_trainer(
 
 
 # Hyperparameter configuration 
-# epoch = 250  # For testing, reduce number of epochs
-epoch = 10
+epoch = 250  # For testing, reduce number of epochs
+# epoch = 10
 config_space = {
 	## Fixed params
 	"epochs": epoch,
