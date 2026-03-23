@@ -30,22 +30,22 @@ data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data_t
 # llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/"
 llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/task-oriented/"
 
-results_folder_tuning = "/data/horse/ws/jaew523d-large_ontix_project/results/large_ontix_save/fourth_run_e250/"
-results_folder_save = "/data/horse/ws/jaew523d-large_ontix_project/results/large_varix_save/baseline_run_e250/"
+results_folder_tuning = "/data/horse/ws/jaew523d-large_ontix_project/results/large_varix_save/first_run_e250/"
+results_folder_save = "/data/horse/ws/jaew523d-large_ontix_project/results/large_varix_save/first_run_e250/"
 
 # Create folder results_folder_save if it doesn't exist
 os.makedirs(results_folder_save, exist_ok=True)
 
-ont_from_cli = sys.argv[1]  # "chatgpt_ontology__", "custom_ontology__"
+dim_from_cli = sys.argv[1]  # "chatgpt_ontology__", "custom_ontology__"
 tuning_experiment_file = sys.argv[2]  # Name of tuning experiment pickle file
 
 file_processed = os.path.join(data_final_folder, "census-acxcontainer_train.pkl")
 
-ont_files = [
-	# Order from Latent Dim -> Hidden Dim -> Input Dim
-	os.path.join(llm_ontology_folder, f"{ont_from_cli}ensembl_level1.tsv"),
-	os.path.join(llm_ontology_folder, f"{ont_from_cli}ensembl_level2.tsv"),
-	]
+# ont_files = [
+# 	# Order from Latent Dim -> Hidden Dim -> Input Dim
+# 	os.path.join(llm_ontology_folder, f"{ont_from_cli}ensembl_level1.tsv"),
+# 	os.path.join(llm_ontology_folder, f"{ont_from_cli}ensembl_level2.tsv"),
+# 	]
 
 #### Step 1 - Load best hyperparameters from tuning experiment #####
 with open(os.path.join(results_folder_tuning, tuning_experiment_file), "rb") as f:
@@ -56,11 +56,11 @@ best_hyperparams = tuning_experiment.best_config()
 with open(file_processed, "rb") as f:
 	acx_container = pickle.load(f)
 
-### Step 3 - Restrict to features in ontology level 2 ###
-ont_lvl2 = pd.read_csv(ont_files[1], sep='\t', usecols=[0], header=None)
-ont_lvl2.columns = ['feature_id']
+# ### Step 3 - Restrict to features in ontology level 2 ###
+# ont_lvl2 = pd.read_csv(ont_files[1], sep='\t', usecols=[0], header=None)
+# ont_lvl2.columns = ['feature_id']
 
-acx_container = keep_features_from_acxcontainer(acx_container, ont_lvl2['feature_id'].values)
+# acx_container = keep_features_from_acxcontainer(acx_container, ont_lvl2['feature_id'].values)
 
 scconfig = VarixConfig(
 	## Fixed params
@@ -69,20 +69,20 @@ scconfig = VarixConfig(
 	checkpoint_interval= best_hyperparams['config_checkpoint_interval'],
 	loss_reduction= best_hyperparams['config_loss_reduction'],
 	## Tunable params
-	# batch_size= best_hyperparams['config_batch_size'],
-	batch_size= 1000, # Guessed average
-	# drop_p= best_hyperparams['config_drop_p'],
-	drop_p = 0.1, # Guessed average
-	# enc_factor= best_hyperparams['config_enc_factor'],
-	enc_factor = 1.5, # Guessed 
-	# weight_decay= best_hyperparams['config_weight_decay'],
-	weight_decay= 1e-3, # Guessed
-	# beta= best_hyperparams['config_beta'],
-	beta= 0.5*1e-4,
-	learning_rate= best_hyperparams['config_learning_rate']*0.5, 
-	# n_layers= best_hyperparams['config_n_layers'],
-	n_layers= 3,
-	latent_dim= int(ont_from_cli.split("_")[0][3:]),
+	batch_size= best_hyperparams['config_batch_size'],
+	# batch_size= 1000, # Guessed average
+	drop_p= best_hyperparams['config_drop_p'],
+	# drop_p = 0.1, # Guessed average
+	enc_factor= best_hyperparams['config_enc_factor'],
+	# enc_factor = 1.5, # Guessed 
+	weight_decay= best_hyperparams['config_weight_decay'],
+	# weight_decay= 1e-3, # Guessed
+	beta= best_hyperparams['config_beta'],
+	# beta= 0.5*1e-4,
+	learning_rate= best_hyperparams['config_learning_rate'], 
+	n_layers= best_hyperparams['config_n_layers'],
+	# n_layers= 3,
+	latent_dim= int(dim_from_cli[3:]),
 	save_vram=True,
 	save_memory=True,
 )
@@ -102,6 +102,6 @@ varix.fit()
 print("Visualizing losses ...")
 varix.visualize()
 print("Saving plots ...")
-varix.visualizer.save_plots(os.path.join(results_folder_save, f"large_varix_final_model_{ont_from_cli}_plots/"))
+varix.visualizer.save_plots(os.path.join(results_folder_save, f"large_varix_final_model_{dim_from_cli}_plots/"))
 print("Training finished, saving model ...")
-varix.save(os.path.join(results_folder_save, f"large_varix_final_model_{ont_from_cli}.pkl"), save_all=False)
+varix.save(os.path.join(results_folder_save, f"large_varix_final_model_{dim_from_cli}.pkl"), save_all=False)
