@@ -1307,7 +1307,7 @@ class BasePipeline(abc.ABC):
                     f"sel_latent_dim must be either an int, a str, a list of ints or a list of strs, got {type(sel_latent_dim)}. Please provide a valid type for sel_latent_dim."
                 )
    
-            
+        print("Start feature attribution calculation")    
         explainer = FeatureImportanceExplainer(
             adata=adata["global"],
             model=model,
@@ -1342,6 +1342,7 @@ class BasePipeline(abc.ABC):
                 genes_to_latent=gene_attributions,  # Example gene list
                 prompt=prompt,
             )
+            print("Start LLM explanation generation")
             explanation = llm_explainer.explain()
             self.result.embedding_explanations = explanation
         self.result.embedding_attributions = df_attributions

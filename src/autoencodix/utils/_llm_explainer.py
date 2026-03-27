@@ -6,6 +6,10 @@ from dotenv import find_dotenv, load_dotenv
 from mistralai import Mistral
 from typing import List, Dict, Any
 
+import requests
+import warnings
+
+
 
 class LLMExplainer:
     """LLM client with support for multiple providers."""
@@ -52,6 +56,13 @@ class LLMExplainer:
             if not api_key:
                 raise ValueError("Environment variable MISTRAL_API_KEY not set")
             self._mistral_client = Mistral(api_key=api_key)
+        elif self._client_name == "openrouter":
+            self._openrouter_api_key = os.environ.get("OPENROUTER_PREMIUM_API_KEY")
+            if not self._openrouter_api_key:
+                raise ValueError("Environment variable OPENROUTER_PREMIUM_API_KEY not set")
+            self._openrouter_url = "https://openrouter.ai/api/v1/chat/completions"
+        else:
+            raise NotImplementedError(f"Client {self._client_name} not implemented")
 
     def _build_prompt(self, *, gene_list: List[str], prompt: str) -> str:
         """Builds the prompt for the LLM.
@@ -112,8 +123,12 @@ class LLMExplainer:
         res: Dict[str, Dict[str, Any]] = {}
         markdown_sections = []
         for key, genes in self.genes_to_latent.items():
+            print(f"Explaining latent dimension {key} with LLM...")
             prompt = self._build_prompt(gene_list=genes, prompt=self.prompt)
             raw_output = self._get_llm_answer(question=prompt)
+            if len(raw_output) == 0:
+                warnings.warn(f"Received empty response from LLM for latent dimension {key}. Skipping.")
+                continue
             # ---- TRY TO PARSE JSON ----
             try:
                 parsed = self.extract_json_from_output(raw_output)
@@ -182,6 +197,8 @@ class LLMExplainer:
             return self._get_mistral_answer(question=question)
         elif self._client_name == "ollama":
             return self._get_ollama_answer(question=question)
+        elif self._client_name == "openrouter":
+            return self._get_openrouter_answer(question=question)
         else:
             raise NotImplementedError(f"Client {self._client_name} not implemented")
 
@@ -220,3 +237,38 @@ class LLMExplainer:
             prompt=question,
         )
         return response["response"]
+    
+    def _get_openrouter_answer(self, *, question: str) -> str:
+        """Get answer from OpenRouter.
+
+        Args:
+            question: The input question.
+        
+        Returns:
+            Generated response text.
+        """
+        
+        response = requests.post(
+        url=self._openrouter_url,
+        headers={
+            "Authorization": f"Bearer {self._openrouter_api_key}",
+        },
+        data=json.dumps({
+            "model": "openai/gpt-oss-120b:free", # Optional
+            "messages": [
+            {
+                "role": "user",
+                "content": question,
+            }
+            ]
+        })
+        )
+        if response.status_code != 200:
+            # Warn
+            warnings.warn(f"OpenRouter API request failed with status code {response.status_code}: {response.text}")
+            # Return empty response
+            return ""
+        if "choices" not in response.json() or len(response.json()["choices"]) == 0:
+            warnings.warn(f"OpenRouter API response missing 'choices': {response.json()}")
+            return ""
+        return response.json()["choices"][0]["message"]["content"]

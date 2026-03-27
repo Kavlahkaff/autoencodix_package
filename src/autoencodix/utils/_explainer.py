@@ -84,12 +84,17 @@ class FeatureImportanceExplainer:
             indices_keep_baseline = np.arange(baselines.shape[0])
         # for latent_dim in range(self.latent_dim):
         all_attr = []
-        latent_dims = (
-            [self.sel_latent_dim]
-            if isinstance(self.sel_latent_dim, int)
-            else list(range(self.latent_dim))
-        )
+        if isinstance(self.sel_latent_dim, list): # Provide list of latent dimensions to explain
+            latent_dims = self.sel_latent_dim
+        elif isinstance(self.sel_latent_dim, int): # Provide single latent dimension to explain
+            latent_dims = [self.sel_latent_dim]
+        elif self.sel_latent_dim is None: # Explain all latent dimensions
+            latent_dims = list(range(self.latent_dim))
+        else:
+            raise ValueError(f"Invalid sel_latent_dim {self.sel_latent_dim}. Must be int, list of ints, or None.")
+
         for latent_dim in latent_dims:
+            print("Calculating attributions for latent dimension:", latent_dim)
             cp_forward_dim = CaptumForward(model=self.model, dim=latent_dim)
             if self.method == "DeepLiftShap":
                 cp_explainer = DeepLiftShap(cp_forward_dim)
