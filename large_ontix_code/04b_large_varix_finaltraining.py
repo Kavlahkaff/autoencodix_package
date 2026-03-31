@@ -31,7 +31,7 @@ data_final_folder = "/data/horse/ws/jaew523d-large_ontix_project/large_sc_data_t
 llm_ontology_folder = "/data/horse/ws/jaew523d-large_ontix_project/final_ontologies/task-oriented/"
 
 results_folder_tuning = "/data/horse/ws/jaew523d-large_ontix_project/results/large_varix_save/first_run_e250/"
-results_folder_save = "/data/horse/ws/jaew523d-large_ontix_project/results/large_varix_save/first_run_e250/"
+results_folder_save = "/data/horse/ws/jaew523d-large_ontix_project/results/large_varix_save/second_run_e250/"
 
 # Create folder results_folder_save if it doesn't exist
 os.makedirs(results_folder_save, exist_ok=True)
@@ -69,19 +69,20 @@ scconfig = VarixConfig(
 	checkpoint_interval= best_hyperparams['config_checkpoint_interval'],
 	loss_reduction= best_hyperparams['config_loss_reduction'],
 	## Tunable params
-	batch_size= best_hyperparams['config_batch_size'],
-	# batch_size= 1000, # Guessed average
-	drop_p= best_hyperparams['config_drop_p'],
-	# drop_p = 0.1, # Guessed average
-	enc_factor= best_hyperparams['config_enc_factor'],
-	# enc_factor = 1.5, # Guessed 
-	weight_decay= best_hyperparams['config_weight_decay'],
-	# weight_decay= 1e-3, # Guessed
-	beta= best_hyperparams['config_beta'],
-	# beta= 0.5*1e-4,
-	learning_rate= best_hyperparams['config_learning_rate'], 
-	n_layers= best_hyperparams['config_n_layers'],
-	# n_layers= 3,
+	# batch_size= best_hyperparams['config_batch_size'],
+	batch_size= 1024, # Guessed average
+	# drop_p= best_hyperparams['config_drop_p'],
+	drop_p = 0.1, # Guessed average
+	# enc_factor= best_hyperparams['config_enc_factor'],
+	enc_factor = 3, # Guessed 
+	# weight_decay= best_hyperparams['config_weight_decay'],
+	weight_decay= 1e-2, # Guessed
+	# beta= best_hyperparams['config_beta'],
+	beta= 1e-3,
+	# learning_rate= best_hyperparams['config_learning_rate'], 
+	learning_rate= 0.5*1e-4, # Guessed
+	# n_layers= best_hyperparams['config_n_layers'],
+	n_layers= 2,
 	latent_dim= int(dim_from_cli[3:]),
 	save_vram=True,
 	save_memory=True,
