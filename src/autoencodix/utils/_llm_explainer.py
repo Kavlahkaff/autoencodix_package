@@ -127,6 +127,7 @@ class LLMExplainer:
             prompt = self._build_prompt(gene_list=genes, prompt=self.prompt)
             raw_output = self._get_llm_answer(question=prompt)
             if len(raw_output) == 0:
+                import warnings
                 warnings.warn(f"Received empty response from LLM for latent dimension {key}. Skipping.")
                 continue
             # ---- TRY TO PARSE JSON ----
@@ -150,7 +151,7 @@ class LLMExplainer:
             res[key] = parsed
             # ---- BUILD READABLE MARKDOWN ----
             markdown_sections.append(f"# Latent Dimension {key}\n")
-            markdown_sections.append("## Genes")
+            markdown_sections.append("## Most influential genes")
             markdown_sections.append(", ".join(genes) + "\n")
             markdown_sections.append("## TLDR")
             markdown_sections.append(parsed.get("TLDR", "") + "\n")
@@ -198,7 +199,7 @@ class LLMExplainer:
         elif self._client_name == "ollama":
             return self._get_ollama_answer(question=question)
         elif self._client_name == "openrouter":
-            return self._get_openrouter_answer(question=question)
+            return self._get_openrouter_answer(question=question, model_name=self._model)
         else:
             raise NotImplementedError(f"Client {self._client_name} not implemented")
 
@@ -238,11 +239,12 @@ class LLMExplainer:
         )
         return response["response"]
     
-    def _get_openrouter_answer(self, *, question: str) -> str:
+    def _get_openrouter_answer(self, *, question: str, model_name: str) -> str:
         """Get answer from OpenRouter.
 
         Args:
             question: The input question.
+            model_name: The name of the model to use.
         
         Returns:
             Generated response text.
@@ -254,7 +256,7 @@ class LLMExplainer:
             "Authorization": f"Bearer {self._openrouter_api_key}",
         },
         data=json.dumps({
-            "model": "openai/gpt-oss-120b:free", # Optional
+            "model": model_name,
             "messages": [
             {
                 "role": "user",
