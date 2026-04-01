@@ -1,21 +1,21 @@
 #### Step 0 - Definitions #####
 
-def keep_features_from_acxcontainer(acx_container, feature_ids_to_keep):
-	import numpy as np
+# def keep_features_from_acxcontainer(acx_container, feature_ids_to_keep):
+# 	import numpy as np
 
-	for split in ['train', 'valid', 'test']:
-		if getattr(acx_container, split) is None:
-			continue
+# 	for split in ['train', 'valid', 'test']:
+# 		if getattr(acx_container, split) is None:
+# 			continue
 
-		dataset = getattr(acx_container, split)
-		feature_id_array = np.array(dataset.feature_ids)
-		keep_indices = [i for i, fid in enumerate(feature_id_array) if fid in feature_ids_to_keep]
+# 		dataset = getattr(acx_container, split)
+# 		feature_id_array = np.array(dataset.feature_ids)
+# 		keep_indices = [i for i, fid in enumerate(feature_id_array) if fid in feature_ids_to_keep]
 
-		dataset.data = dataset.data[:, keep_indices]
-		dataset.feature_ids = [dataset.feature_ids[i] for i in keep_indices]
-		setattr(acx_container, split, dataset)
+# 		dataset.data = dataset.data[:, keep_indices]
+# 		dataset.feature_ids = [dataset.feature_ids[i] for i in keep_indices]
+# 		setattr(acx_container, split, dataset)
 
-	return acx_container
+# 	return acx_container
 
 import os
 import sys
@@ -42,21 +42,22 @@ import pickle
 import autoencodix as acx
 # from autoencodix.configs.ontix_config import OntixConfig
 
-print("Preparing holdout data for feature size per ontology ...")
-ont_files = [
-	# Order from Latent Dim -> Hidden Dim -> Input Dim
-	os.path.join(llm_ontology_folder, f"{ont_from_cli}ensembl_level1.tsv"),
-	os.path.join(llm_ontology_folder, f"{ont_from_cli}ensembl_level2.tsv"),
-	]
+# print("Preparing holdout data for feature size per ontology ...")
+# ont_files = [
+# 	# Order from Latent Dim -> Hidden Dim -> Input Dim
+# 	os.path.join(llm_ontology_folder, f"{ont_from_cli}ensembl_level1.tsv"),
+# 	os.path.join(llm_ontology_folder, f"{ont_from_cli}ensembl_level2.tsv"),
+# 	]
 
-ont_lvl2 = pd.read_csv(ont_files[1], sep='\t', usecols=[0], header=None)
-ont_lvl2.columns = ['feature_id']
+# ont_lvl2 = pd.read_csv(ont_files[1], sep='\t', usecols=[0], header=None)
+# ont_lvl2.columns = ['feature_id']
 
 print("Loading tune set to pre-fit PCA reducer ...")
 with open(file_tuning, "rb") as f:
 	acx_container = pickle.load(f) # Later overwritten to save RAM
 
-acx_container = keep_features_from_acxcontainer(acx_container, ont_lvl2['feature_id'].values)
+# acx_container = keep_features_from_acxcontainer(acx_container, ont_lvl2['feature_id'].values)
+
 ## Pre-fit PCA reducer 
 from sklearn.decomposition import PCA
 
@@ -74,7 +75,7 @@ print("Loading holdout data ...")
 with open(file_holdout, "rb") as f:
 	acx_container = pickle.load(f)
 
-acx_container = keep_features_from_acxcontainer(acx_container, ont_lvl2['feature_id'].values)
+# acx_container = keep_features_from_acxcontainer(acx_container, ont_lvl2['feature_id'].values)
 
 
 # #####  Expand metadata with cell type tasks ###################
