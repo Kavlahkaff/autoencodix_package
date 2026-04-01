@@ -1158,6 +1158,8 @@ class BasePipeline(abc.ABC):
                 prior has incompatible dimensions.
             TypeError: If latent_prior is not a numpy array or tensor.
         """
+        self._trainer.setup_trainer(old_model=self.result.model)
+        
         if not isinstance(n_samples, int) or n_samples <= 0:
             if latent_prior is None:
                 raise ValueError(
