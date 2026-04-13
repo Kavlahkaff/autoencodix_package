@@ -88,8 +88,7 @@ def construct_output_path(job, base_dir="/data/cat/ws/luth474h-autoencodix_hpo/a
         path_parts.append(job["ontology"])
     
     # Add seed directory
-    #path_parts.append(f"seed_{job['seed']}")
-    path_parts.append(f"beta_tests")
+    path_parts.append(f"seed_{job['seed']}")
     result_dir = pathlib.Path(*path_parts)
     result_dir.mkdir(parents=True, exist_ok=True)
     
@@ -149,6 +148,18 @@ def run_single_job(job: Dict, data_config_cache: Dict, epochs: int):
         data_config_cache: Pre-loaded data configurations to avoid reloading
         epochs: Number of epochs from search space config
     """
+    # Define output path first to allow checking existence
+    result_dir = construct_output_path(job)
+    output_path = result_dir / f"{job['run_id']}_result.json"
+
+    # --- SKIP LOGIC ---
+#    if output_path.exists():
+#        logger.info("⏩ Skipping Run ID: %s (Result already exists at %s)", job["run_id"], output_path)
+#        return "SKIPPED" 
+    # ------------------
+
+    logger.info("="*80)
+    logger.info("Starting Run ID: %s", job["run_id"])
     logger.info("="*80)
     logger.info("Starting Run ID: %s", job["run_id"])
     logger.info("Architecture: %s | Dataset: %s", job["architecture"], job["dataset"])
@@ -232,20 +243,11 @@ def run_single_job(job: Dict, data_config_cache: Dict, epochs: int):
         "RUNTIME_SECONDS": round(runtime_sec, 4),
     }
 
-    # Construct output directory matching batch structure
-    result_dir = construct_output_path(job)
-    result_dir.mkdir(parents=True, exist_ok=True)
-
-    output_path = result_dir / f"{job['run_id']}_result.json"
     with open(output_path, "w") as f:
         json.dump(results, f, indent=4, default=json_numpy_serializer)
     
-    pkl_path = result_dir / f"{job['run_id']}_full_object.pkl"
-    with open(pkl_path, "wb") as f:
-        pickle.dump(result, f)
-    
     logger.info("Results saved to %s", output_path)
-    logger.info("Full object saved to %s", pkl_path)
+#    logger.info("Full object saved to %s", pkl_path)
     
     return results
 
@@ -253,38 +255,28 @@ def run_single_job(job: Dict, data_config_cache: Dict, epochs: int):
 def run_batch(config_paths: List[str]):
     """
     Run multiple jobs in sequence, reusing data configurations.
-    
-    Args:
-        config_paths: List of paths to individual job config files
     """
     logger.info("Starting batch run with %d configurations", len(config_paths))
-    
-    # Load all job configurations
     jobs = load_job_configs(config_paths)
-    
-    # Load epochs once
     epochs = get_epochs()
-    logger.info("Loaded epochs configuration: %d", epochs)
-    
-    # Cache for data configurations (key: (dataset, modalities_tuple))
     data_config_cache = {}
     
-    # Track results
     all_results = []
     failed_jobs = []
+    skipped_count = 0 # Track skips for the summary
     
     batch_start_time = time.perf_counter()
     
     for idx, job in enumerate(jobs, 1):
-        logger.info("\n" + "="*80)
-        logger.info(f"BATCH PROGRESS: Job {idx}/{len(jobs)}")
-        logger.info("="*80)
-        
         try:
             result = run_single_job(job, data_config_cache, epochs)
-            all_results.append(result)
-            logger.info("✓ Job %d/%d completed successfully", idx, len(jobs))
             
+            if result == "SKIPPED":
+                skipped_count += 1
+            else:
+                all_results.append(result)
+                logger.info("✓ Job %d/%d completed successfully", idx, len(jobs))
+                
         except Exception as e:
             logger.error("✗ Job %d/%d FAILED: %s", idx, len(jobs), job["run_id"])
             logger.error("Error: %s", str(e), exc_info=True)
@@ -296,25 +288,18 @@ def run_batch(config_paths: List[str]):
     
     batch_runtime = time.perf_counter() - batch_start_time
     
-    # Print summary
+    # Updated Summary
     logger.info("\n" + "="*80)
     logger.info("BATCH RUN SUMMARY")
     logger.info("="*80)
-    logger.info("Total jobs: %d", len(jobs))
-    logger.info("Successful: %d", len(all_results))
-    logger.info("Failed: %d", len(failed_jobs))
-    logger.info("Total runtime: %.2f seconds (%.2f minutes)", 
-               batch_runtime, batch_runtime/60)
-    
-    if failed_jobs:
-        logger.warning("\nFailed jobs:")
-        for fail in failed_jobs:
-            logger.warning("  - %s: %s", fail["run_id"], fail["error"])
-    
+    logger.info("Total configs processed: %d", len(jobs))
+    logger.info("Newly Completed:        %d", len(all_results))
+    logger.info("Skipped (Already done): %d", skipped_count)
+    logger.info("Failed:                 %d", len(failed_jobs))
+    logger.info("Total runtime: %.2f seconds", batch_runtime)
     logger.info("="*80)
     
     return all_results, failed_jobs
-
 
 # -----------------------------------------------------------------------------
 # Entry point

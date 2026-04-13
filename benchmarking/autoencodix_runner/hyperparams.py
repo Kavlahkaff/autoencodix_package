@@ -22,10 +22,10 @@ def sample_hyperparams(config_path="/data/cat/ws/luth474h-autoencodix_hpo/autoen
     }
 
     if architecture == "disentanglix":
-        cfg["beta_mi"] = random.choice(yaml_cfg["search"]["beta_mi"])
-        cfg["beta_tc"] = random.choice(yaml_cfg["search"]["beta_tc"])
+        cfg["beta_mi"] = random_log(*yaml_cfg["search"]["beta_mi"])
+        cfg["beta_tc"] = random_log(*yaml_cfg["search"]["beta_tc"])
         cfg["beta_dimKL"] = random_log(*yaml_cfg["search"]["beta_dimKL"])
-    elif architecture == "varix":
+    elif architecture == "varix" or architecture == "ontix":
         cfg["beta"] = random_log(*yaml_cfg["search"]["beta"])
 
     return cfg
