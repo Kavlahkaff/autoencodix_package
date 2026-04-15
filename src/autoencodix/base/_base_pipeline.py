@@ -1212,7 +1212,7 @@ class BasePipeline(abc.ABC):
         seed_int: int = 12,
         split: Literal["train", "test", "valid"] = "train",
         llm_explain: bool = False,
-        llm_client: Literal["ollama", "mistral"] = "mistral",
+        llm_client: Literal["ollama", "mistral", "openrouter", "scads-llm"] = "mistral",
         llm_model: str = "mistral-large-latest",
         top_n_genes: int = 40,
         prompt: str = PROMPT,

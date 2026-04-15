@@ -4,6 +4,7 @@ import json
 import ollama
 from dotenv import find_dotenv, load_dotenv
 from mistralai import Mistral
+from openai import OpenAI
 from typing import List, Dict, Any
 
 import requests
@@ -61,6 +62,11 @@ class LLMExplainer:
             if not self._openrouter_api_key:
                 raise ValueError("Environment variable OPENROUTER_PREMIUM_API_KEY not set")
             self._openrouter_url = "https://openrouter.ai/api/v1/chat/completions"
+        elif self._client_name == "scads-llm":
+            self._scads_llm_api_key = os.environ.get("SCADS_LLM_API_KEY")
+            if not self._scads_llm_api_key:
+                raise ValueError("Environment variable SCADS_LLM_API_KEY not set")
+            self._scads_llm_url = "https://llm.scads.ai/v1"
         else:
             raise NotImplementedError(f"Client {self._client_name} not implemented")
 
@@ -200,6 +206,8 @@ class LLMExplainer:
             return self._get_ollama_answer(question=question)
         elif self._client_name == "openrouter":
             return self._get_openrouter_answer(question=question, model_name=self._model)
+        elif self._client_name == "scads-llm":
+            return self._get_scads_llm_answer(question=question, model_name=self._model)
         else:
             raise NotImplementedError(f"Client {self._client_name} not implemented")
 
@@ -274,3 +282,21 @@ class LLMExplainer:
             warnings.warn(f"OpenRouter API response missing 'choices': {response.json()}")
             return ""
         return response.json()["choices"][0]["message"]["content"]
+    
+    def _get_scads_llm_answer(self, *, question: str, model_name: str) -> str:
+        """Get answer from SCADS-LLM.
+
+        Args:
+            question: The input question.
+            model_name: The name of the model to use.   
+        
+        Returns:
+            Generated response text.
+        """
+        
+        client = OpenAI(base_url="https://llm.scads.ai/v1",api_key=self._scads_llm_api_key)
+        
+        response = client.chat.completions.create(messages=[{"role":"user","content":question}],model=model_name)
+        
+        return response.choices[0].message.content
+        
