@@ -41,15 +41,15 @@ with open(file_processed, "rb") as f:
 
 
 # ## Downsample 
-for split in ['train', 'valid', 'test']:
-	if getattr(acx_container, split) is None:
-		continue
+# for split in ['train', 'valid', 'test']:
+# 	if getattr(acx_container, split) is None:
+# 		continue
 	
-	dataset = getattr(acx_container, split)
-	dataset.data = dataset.data[:20000, :]
-	dataset.sample_ids = dataset.sample_ids[:20000]
-	dataset.metadata = dataset.metadata.loc[dataset.sample_ids, :]
-	setattr(acx_container, split, dataset)
+# 	dataset = getattr(acx_container, split)
+# 	dataset.data = dataset.data[:20000, :]
+# 	dataset.sample_ids = dataset.sample_ids[:20000]
+# 	dataset.metadata = dataset.metadata.loc[dataset.sample_ids, :]
+# 	setattr(acx_container, split, dataset)
 
 scconfig = DisentanglixConfig(
 	## Fixed params
@@ -67,11 +67,11 @@ scconfig = DisentanglixConfig(
 	# weight_decay= best_hyperparams['config_weight_decay'],
 	weight_decay= 1e-2, # Guessed
 	# beta= best_hyperparams['config_beta'],
-	beta_mi = 0.0001,
-	beta_tc = 100,
-	beta_dimKL= 0.0001,
+	beta_mi = 0.5*1e-3,
+	beta_tc = 10,
+	beta_dimKL= 0.5*1e-3,
 	# learning_rate= best_hyperparams['config_learning_rate'], 
-	learning_rate= 0.2*1e-3, # Guessed
+	learning_rate= 0.5*1e-4, # Guessed
 	# n_layers= best_hyperparams['config_n_layers'],
 	n_layers= 2,
 	latent_dim= int(dim_from_cli[3:]),
