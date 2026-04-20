@@ -20,12 +20,22 @@ def evaluate(model, tasks, epochs):
         n_downsample=10000
     )
     plt.close("all")
-    avg_mltask_performance = model.result.embedding_evaluation.loc[
-        model.result.embedding_evaluation.score_split == "valid",
-        "value"
-    ].mean()
+
+    valid_scores = model.result.embedding_evaluation.loc[
+        model.result.embedding_evaluation.score_split == "valid"
+    ]
+
+    avg_mltask_performance = valid_scores["value"].mean()
+    # Per-task scores: {task_name: score}
+    per_task_performance = (
+        valid_scores.set_index("CLINIC_PARAM")["value"]
+        .to_dict()
+    )
+
     valid_recon_loss = float(model.result.sub_losses.get("recon_loss").get(epoch=-1, split="valid"))
-    loss_per_epoch = {}
-    for epoch in range(0,epochs):
-        loss_per_epoch[epoch] = model.result.sub_losses.get("recon_loss").get(epoch=epoch, split="valid")
-    return avg_mltask_performance, valid_recon_loss, loss_per_epoch
+    loss_per_epoch = {
+        epoch: model.result.sub_losses.get("recon_loss").get(epoch=epoch, split="valid")
+        for epoch in range(0, epochs)
+    }
+
+    return avg_mltask_performance, per_task_performance, valid_recon_loss, loss_per_epoch

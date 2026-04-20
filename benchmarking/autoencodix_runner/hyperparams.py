@@ -14,7 +14,6 @@ def sample_hyperparams(config_path="/data/cat/ws/luth474h-autoencodix_hpo/autoen
         "k_filter": random.choice(yaml_cfg["search"]["k_filter"]),
         "n_layers": random.choice(yaml_cfg["search"]["n_layers"]),
         "enc_factor": random.choice(yaml_cfg["search"]["enc_factor"]),
-        "latent_dim": random.choice(yaml_cfg["search"]["latent_dim"]),
         "learning_rate": random_log(*yaml_cfg["search"]["learning_rate"]),
         "weight_decay": random_log(*yaml_cfg["search"]["weight_decay"]),
         "batch_size": random.choice(yaml_cfg["search"]["batch_size"]),
@@ -25,9 +24,10 @@ def sample_hyperparams(config_path="/data/cat/ws/luth474h-autoencodix_hpo/autoen
         cfg["beta_mi"] = random_log(*yaml_cfg["search"]["beta_mi"])
         cfg["beta_tc"] = random_log(*yaml_cfg["search"]["beta_tc"])
         cfg["beta_dimKL"] = random_log(*yaml_cfg["search"]["beta_dimKL"])
-    elif architecture == "varix" or architecture == "ontix":
+    if architecture == "varix" or architecture == "ontix":
         cfg["beta"] = random_log(*yaml_cfg["search"]["beta"])
-
+    if architecture != "ontix":
+        cfg["latent_dim"] =  random.choice(yaml_cfg["search"]["latent_dim"])
     return cfg
 
 def sample_hp_configs(architecture, num_hp, hp_seed):

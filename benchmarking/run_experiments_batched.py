@@ -67,7 +67,7 @@ def get_epochs():
     return cfg["fixed"]["epochs"]
 
 
-def construct_output_path(job, base_dir="/data/cat/ws/luth474h-autoencodix_hpo/autoencodix_results"):
+def construct_output_path(job, base_dir="/data/cat/ws/luth474h-autoencodix_hpo/ontix_rerun"):
     """
     Construct output directory matching batch structure:
     base_dir/architecture/dataset/modality/[ontology/]seed_X/
@@ -153,9 +153,9 @@ def run_single_job(job: Dict, data_config_cache: Dict, epochs: int):
     output_path = result_dir / f"{job['run_id']}_result.json"
 
     # --- SKIP LOGIC ---
-#    if output_path.exists():
-#        logger.info("⏩ Skipping Run ID: %s (Result already exists at %s)", job["run_id"], output_path)
-#        return "SKIPPED" 
+    if output_path.exists():
+        logger.info("⏩ Skipping Run ID: %s (Result already exists at %s)", job["run_id"], output_path)
+        return "SKIPPED" 
     # ------------------
 
     logger.info("="*80)
@@ -224,11 +224,9 @@ def run_single_job(job: Dict, data_config_cache: Dict, epochs: int):
         "schc": ["author_cell_type", "age_group", "sex"],
     }[job["dataset"]]
 
-    logger.info("Starting evaluation")
-    avg, rec, loss_per_epoch = evaluate(model, tasks, epochs)
-    logger.info("Evaluation finished")
-
-    # 6. Save Results
+    logger.info("starting evaluation")
+    avg, per_task, rec, loss_per_epoch = evaluate(model, tasks, epochs)
+    logger.info("finished evaluation")
     results = {
         "RUN_ID": job["run_id"],
         "ARCHITECTURE": job["architecture"],
@@ -238,6 +236,7 @@ def run_single_job(job: Dict, data_config_cache: Dict, epochs: int):
         "ONTOLOGY": job.get("ontology", "N/A"),
         "HYPERPARAMETERS": job["hyperparameters"],
         "AVG_ML_TASK_PERFORMANCE": avg,
+        "PER_TASK_PERFORMANCE": per_task,   # {"CANCER_TYPE": 0.82, "SEX": 0.91, ...}
         "VALID_RECON_LOSS": rec,
         "loss_per_epoch": loss_per_epoch,
         "RUNTIME_SECONDS": round(runtime_sec, 4),

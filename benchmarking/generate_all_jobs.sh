@@ -3,7 +3,7 @@
 # Configuration
 NUM_HP=3000
 NUM_SEEDS=3
-BASE_CONFIG_DIR="autoencodix_package/benchmarking/experiments"
+BASE_CONFIG_DIR="./experiments"
 MANIFEST="all_jobs.txt"
 
 # Clear old configs to avoid mixing experiments
