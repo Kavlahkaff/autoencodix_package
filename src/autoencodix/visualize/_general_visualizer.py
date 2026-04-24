@@ -53,7 +53,7 @@ class GeneralVisualizer(BaseVisualizer):
                 f"This usually happens if you try to visualize after saving and loading "
                 f"the pipeline object with `save_all=False`. This memory-efficient saving mode "
                 f"does not retain past training loss data.\n\n"
-                f"Original error message: {e}"
+                # f"Original error message: {e}"
             )
 
         return result

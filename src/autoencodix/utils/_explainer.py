@@ -68,17 +68,22 @@ class FeatureImportanceExplainer:
         inputs, baselines = return_inputs_baseline(
             adata_ACX, self.baseline_group, self.baseline_type, self.anno_col, self.input_type, self.input_group
         )
+        # set n_samples to whatever is lowest from: inputs, baselines, n_subset (if not None)
+        n_samples = min(inputs.shape[0], baselines.shape[0])
+        if self.n_subset is not None:
+            n_samples = min(n_samples, self.n_subset)
+
         # Downsample input
-        if self.n_subset is not None and self.n_subset < inputs.shape[0]:
+        if self.n_subset is not None:
             indices_keep = np.random.choice(
-                inputs.shape[0], size=self.n_subset, replace=False
+                inputs.shape[0], size=n_samples, replace=False
             )
         else:
             indices_keep = np.arange(inputs.shape[0])
         # Downsample baselines in the same way
-        if self.n_subset is not None and self.n_subset < baselines.shape[0]:
+        if self.n_subset is not None:
             indices_keep_baseline = np.random.choice(
-                baselines.shape[0], size=self.n_subset, replace=False
+                baselines.shape[0], size=n_samples, replace=False
             )
         else:
             indices_keep_baseline = np.arange(baselines.shape[0])
