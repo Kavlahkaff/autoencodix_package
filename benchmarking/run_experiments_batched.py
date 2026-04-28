@@ -67,7 +67,7 @@ def get_epochs():
     return cfg["fixed"]["epochs"]
 
 
-def construct_output_path(job, base_dir="/data/cat/ws/luth474h-autoencodix_hpo/ontix_rerun"):
+def construct_output_path(job, base_dir="/data/cat/ws/luth474h-autoencodix_hpo/varix_vanillix_disentanglix_rerun"):
     """
     Construct output directory matching batch structure:
     base_dir/architecture/dataset/modality/[ontology/]seed_X/

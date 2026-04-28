@@ -3,13 +3,13 @@
 # Configuration
 NUM_HP=3000
 NUM_SEEDS=3
-BASE_CONFIG_DIR="./experiments"
+BASE_CONFIG_DIR="/data/cat/ws/luth474h-autoencodix_hpo/autoencodix_package/benchmarking/experiments"
 MANIFEST="all_jobs.txt"
 
 # Clear old configs to avoid mixing experiments
-rm -rf "$BASE_CONFIG_DIR"
+#rm -rf "$BASE_CONFIG_DIR"
 rm -f "$MANIFEST"
-mkdir -p "$BASE_CONFIG_DIR"
+#mkdir -p "$BASE_CONFIG_DIR"
 
 generate_call() {
     local ARCH=$1

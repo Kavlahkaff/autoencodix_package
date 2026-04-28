@@ -3,13 +3,13 @@ from autoencodix.configs import VarixConfig, VanillixConfig, DisentanglixConfig,
 
 def create_model(arch, data_config, hyperparams, seed, ontologies=None, sep="\t"):
     if arch == "varix":
-        cfg = VarixConfig(data_config=data_config, **hyperparams, global_seed=seed)
+        cfg = VarixConfig(data_config=data_config, **hyperparams, global_seed=seed, scaling="MINMAX")
         return acx.Varix(config=cfg)
     elif arch == "vanillix":
-        cfg = VanillixConfig(data_config=data_config, **hyperparams, global_seed=seed)
+        cfg = VanillixConfig(data_config=data_config, **hyperparams, global_seed=seed, scaling="MINMAX")
         return acx.Vanillix(config=cfg)
     elif arch == "disentanglix":
-        cfg = DisentanglixConfig(data_config=data_config, **hyperparams, global_seed=seed)
+        cfg = DisentanglixConfig(data_config=data_config, **hyperparams, global_seed=seed, scaling="MINMAX")
         return acx.Disentanglix(config=cfg)
     elif arch == "ontix":
         cfg = OntixConfig(data_config=data_config, **hyperparams, global_seed=seed)
