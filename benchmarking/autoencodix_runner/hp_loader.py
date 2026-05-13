@@ -2,9 +2,11 @@ import pandas as pd
 from autoencodix_runner.hyperparams import random_log
 import random
 
+import os
+
 def load_results(path: str) -> pd.DataFrame:
-    base_path = "/data/cat/ws/luth474h-autoencodix_hpo/data/ralf_hpo_results/ae_results_30000_runs/"
-    return pd.read_parquet(base_path+path)
+    base_path = os.environ.get("AUTOENCODIX_HPO_RESULTS_DIR", "./data/ralf_hpo_results/ae_results_30000_runs/")
+    return pd.read_parquet(os.path.join(base_path, path))
 
 
 def get_top_k_configs(df: pd.DataFrame, k=3, metric="valid_recon_loss", architecture="vanillix"):

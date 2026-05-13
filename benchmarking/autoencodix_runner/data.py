@@ -1,19 +1,23 @@
 from autoencodix.configs.default_config import DataConfig, DataInfo
 
 
+import os
+
+DATA_DIR = os.environ.get("AUTOENCODIX_DATA_DIR", "./data")
+
 #tcga dataset files
 tcga_files = {
-    "METH": "/data/cat/ws/luth474h-autoencodix_hpo/data/data_methylation_per_gene_formatted.parquet",
-    "RNA": "/data/cat/ws/luth474h-autoencodix_hpo/data/data_mrna_seq_v2_rsem_formatted.parquet",
-    "DNA": "/data/cat/ws/luth474h-autoencodix_hpo/data/data_combi_MUT_CNA_formatted.parquet",
-    "CLIN": "/data/cat/ws/luth474h-autoencodix_hpo/data/data_clinical_formatted.parquet",
+    "METH": os.path.join(DATA_DIR, "data_methylation_per_gene_formatted.parquet"),
+    "RNA": os.path.join(DATA_DIR, "data_mrna_seq_v2_rsem_formatted.parquet"),
+    "DNA": os.path.join(DATA_DIR, "data_combi_MUT_CNA_formatted.parquet"),
+    "CLIN": os.path.join(DATA_DIR, "data_clinical_formatted.parquet"),
 }
 
 #schc dataset files
 schc_files = {
-    "METH": "/data/cat/ws/luth474h-autoencodix_hpo/data/scATAC_human_cortex_formatted.parquet",
-    "RNA": "/data/cat/ws/luth474h-autoencodix_hpo/data/scRNA_human_cortex_formatted.parquet",
-    "CLIN": "/data/cat/ws/luth474h-autoencodix_hpo/data/scATAC_human_cortex_clinical_formatted.parquet",
+    "METH": os.path.join(DATA_DIR, "scATAC_human_cortex_formatted.parquet"),
+    "RNA": os.path.join(DATA_DIR, "scRNA_human_cortex_formatted.parquet"),
+    "CLIN": os.path.join(DATA_DIR, "scATAC_human_cortex_clinical_formatted.parquet"),
 }
 
 

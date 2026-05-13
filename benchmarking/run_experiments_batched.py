@@ -41,33 +41,28 @@ logger = setup_logging()
 # -----------------------------------------------------------------------------
 # Helper functions
 # -----------------------------------------------------------------------------
+import os
+
 def load_ontology_paths(dataset, ontology_name):
-    cfg = yaml.safe_load(
-        open(
-            "/data/cat/ws/luth474h-autoencodix_hpo/"
-            "autoencodix_package/benchmarking/configs/ontologies.yaml"
-        )
-    )
+    config_path = pathlib.Path(__file__).parent / "configs" / "ontologies.yaml"
+    cfg = yaml.safe_load(open(config_path))
     if dataset not in cfg:
         raise ValueError(f"No ontology configuration for dataset: {dataset}")
     if ontology_name not in cfg[dataset]:
         raise ValueError(f"No ontology named {ontology_name} for dataset {dataset}")
 
     paths = cfg[dataset][ontology_name]["paths"]
-    return [paths["lvl1"], paths["lvl2"]]
+    data_dir = os.environ.get("AUTOENCODIX_DATA_DIR", "./data")
+    return [os.path.join(data_dir, paths["lvl1"]), os.path.join(data_dir, paths["lvl2"])]
 
 
 def get_epochs():
-    cfg = yaml.safe_load(
-        open(
-            "/data/cat/ws/luth474h-autoencodix_hpo/"
-            "autoencodix_package/benchmarking/configs/search_space.yaml"
-        )
-    )
+    config_path = pathlib.Path(__file__).parent / "configs" / "search_space.yaml"
+    cfg = yaml.safe_load(open(config_path))
     return cfg["fixed"]["epochs"]
 
 
-def construct_output_path(job, base_dir="/data/cat/ws/luth474h-autoencodix_hpo/varix_vanillix_disentanglix_rerun"):
+def construct_output_path(job, base_dir=None):
     """
     Construct output directory matching batch structure:
     base_dir/architecture/dataset/modality/[ontology/]seed_X/
@@ -76,6 +71,9 @@ def construct_output_path(job, base_dir="/data/cat/ws/luth474h-autoencodix_hpo/v
     - vanillix: results/vanillix/tcga/DNA_CLIN/seed_1/
     - ontix: results/ontix/tcga/DNA_CLIN/go_biological_process/seed_2/
     """
+    if base_dir is None:
+        base_dir = os.environ.get("AUTOENCODIX_RESULTS_DIR", "./results")
+
     path_parts = [
         base_dir,
         job["architecture"],

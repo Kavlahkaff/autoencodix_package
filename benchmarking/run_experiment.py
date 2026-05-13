@@ -39,33 +39,28 @@ logger = setup_logging()
 # -----------------------------------------------------------------------------
 # Helper functions
 # -----------------------------------------------------------------------------
+import os
+
 def load_ontology_paths(dataset, ontology_name):
-    cfg = yaml.safe_load(
-        open(
-            "/data/cat/ws/luth474h-autoencodix_hpo/"
-            "autoencodix_package/benchmarking/configs/ontologies.yaml"
-        )
-    )
+    config_path = pathlib.Path(__file__).parent / "configs" / "ontologies.yaml"
+    cfg = yaml.safe_load(open(config_path))
     if dataset not in cfg:
         raise ValueError(f"No ontology configuration for dataset: {dataset}")
     if ontology_name not in cfg[dataset]:
         raise ValueError(f"No ontology named {ontology_name} for dataset {dataset}")
 
     paths = cfg[dataset][ontology_name]["paths"]
-    return [paths["lvl1"], paths["lvl2"]]
+    data_dir = os.environ.get("AUTOENCODIX_DATA_DIR", "./data")
+    return [os.path.join(data_dir, paths["lvl1"]), os.path.join(data_dir, paths["lvl2"])]
 
 
 def get_epochs():
-    cfg = yaml.safe_load(
-        open(
-            "/data/cat/ws/luth474h-autoencodix_hpo/"
-            "autoencodix_package/benchmarking/configs/search_space.yaml"
-        )
-    )
+    config_path = pathlib.Path(__file__).parent / "configs" / "search_space.yaml"
+    cfg = yaml.safe_load(open(config_path))
     return cfg["fixed"]["epochs"]
 
 
-def construct_output_path(job, base_dir="/data/cat/ws/luth474h-autoencodix_hpo/autoencodix_results"):
+def construct_output_path(job, base_dir=None):
     """
     Construct output directory matching batch structure:
     base_dir/architecture/dataset/modality/[ontology/]seed_X/
@@ -74,6 +69,9 @@ def construct_output_path(job, base_dir="/data/cat/ws/luth474h-autoencodix_hpo/a
     - vanillix: results/vanillix/tcga/DNA_CLIN/seed_1/
     - ontix: results/ontix/tcga/DNA_CLIN/go_biological_process/seed_2/
     """
+    if base_dir is None:
+        base_dir = os.environ.get("AUTOENCODIX_RESULTS_DIR", "./results")
+
     path_parts = [
         base_dir,
         job["architecture"],
@@ -102,6 +100,7 @@ def json_numpy_serializer(obj):
     if isinstance(obj, np.ndarray):
         return obj.tolist()
     raise TypeError(f"Type {type(obj)} not serializable")
+
 # -----------------------------------------------------------------------------
 # Main job logic
 # -----------------------------------------------------------------------------
@@ -142,10 +141,9 @@ def run_job(config_path):
     # 4. Execute
     logger.info("Starting model run")
     start_time = time.perf_counter()
-    # Instead of result = model.run(), call the steps individually with logs:
     model.run()
     runtime_sec = time.perf_counter() - start_time
-    result = model.visualizer._make_loss_format(model.result, data_config)
+    #result = model.visualizer._make_loss_format(model.result, data_config)
     logger.info("Model run finished")
 
     # 5. Evaluate
@@ -193,7 +191,7 @@ def run_job(config_path):
         json.dump(results, f, indent=4, default=json_numpy_serializer)
     
     result_df_path = result_dir / f"{job['run_id']}_result_df.parquet"
-    result.to_parquet(result_df_path)
+    #result.to_parquet(result_df_path)
     logger.info("Finished successfully. Results saved to %s", output_path)
 
 # -----------------------------------------------------------------------------

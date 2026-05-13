@@ -3,13 +3,13 @@
 # Configuration
 NUM_HP=3000
 NUM_SEEDS=3
-BASE_CONFIG_DIR="/data/cat/ws/luth474h-autoencodix_hpo/autoencodix_package/benchmarking/experiments"
+BASE_CONFIG_DIR="${AUTOENCODIX_BASE_CONFIG_DIR:-./experiments}"
 MANIFEST="all_jobs.txt"
 
 # Clear old configs to avoid mixing experiments
-#rm -rf "$BASE_CONFIG_DIR"
+rm -rf "$BASE_CONFIG_DIR"
 rm -f "$MANIFEST"
-#mkdir -p "$BASE_CONFIG_DIR"
+mkdir -p "$BASE_CONFIG_DIR"
 
 generate_call() {
     local ARCH=$1
@@ -18,8 +18,7 @@ generate_call() {
     local ONT=$4
     
     local MOD_FOLDER=$(echo $MODS | tr ' ' '_')
-    
-    # --- LOGIC CHANGE START ---
+
     # If it's not ontix, save directly in the modality folder.
     # If it is ontix, save in a subfolder named after the ontology.
     if [[ "$ARCH" == "ontix" ]]; then
@@ -27,7 +26,6 @@ generate_call() {
     else
         local SUBDIR="${BASE_CONFIG_DIR}/${ARCH}/${DATASET}/${MOD_FOLDER}"
     fi
-    # --- LOGIC CHANGE END ---
 
     mkdir -p "$SUBDIR"
 
@@ -58,7 +56,7 @@ for DATASET in tcga schc; do
     done
   done
 
-  # Multi-omics
+  # Multi-modalities
   if [[ "$DATASET" == "tcga" ]]; then
     MODS="RNA DNA METH CLIN"
   else
@@ -74,7 +72,6 @@ for DATASET in tcga schc; do
   done
 done
 
-# --- FINALIZE ---
 echo "------------------------------------------------"
 echo "Creating manifest file: $MANIFEST"
 find "$BASE_CONFIG_DIR" -name "*.yaml" | sort > "$MANIFEST"

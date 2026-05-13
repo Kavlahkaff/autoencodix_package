@@ -1,6 +1,6 @@
-# Autoencodix Reproducibility Guide
+# BBOmix Reproducibility Guide
 
-This directory contains the scripts and configurations required to reproduce the large-scale benchmarking experiments for the Autoencodix package. The codebase is designed to be easily reproducible on any machine.
+This directory contains the scripts and configurations required to reproduce the large-scale benchmark BBOmix using the Autoencodix package. The codebase is designed to be easily reproducible on any machine.
 
 ## Installation
 
@@ -37,7 +37,6 @@ Before running the scripts, you can optionally configure the following environme
 - `AUTOENCODIX_DATA_DIR`: The directory containing your dataset and ontology files. (Default: `./data`)
 - `AUTOENCODIX_RESULTS_DIR`: The output directory where experiment results will be saved. (Default: `./results`)
 - `AUTOENCODIX_BASE_CONFIG_DIR`: The directory where job configurations are generated. (Default: `./experiments`)
-- `AUTOENCODIX_HPO_RESULTS_DIR`: The base directory for existing hyperparameter optimization results (used by `hp_loader.py`). (Default: `./data/ralf_hpo_results/ae_results_30000_runs/`)
 
 ### Data Download
 
@@ -102,7 +101,7 @@ Once configs are generated, you can either run individual jobs or a batch of con
 
 ```bash
 export AUTOENCODIX_DATA_DIR="/path/to/your/data"
-export AUTOENCODIX_RESULTS_DIR="/path/to/your/results"
+export BBOMIX_RESULTS_DIR="/path/to/your/results"
 
 python run_experiment.py --config /path/to/specific/job_config.yaml
 ```
@@ -113,7 +112,7 @@ For cluster environments or sequential execution, you can pass multiple configs 
 
 ```bash
 export AUTOENCODIX_DATA_DIR="/path/to/your/data"
-export AUTOENCODIX_RESULTS_DIR="/path/to/your/results"
+export BBOMIX_RESULTS_DIR="/path/to/your/results"
 
 # Pass a list of configurations
 python run_experiments_batched.py --configs /path/to/job1.yaml /path/to/job2.yaml
