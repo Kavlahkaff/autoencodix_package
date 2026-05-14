@@ -25,7 +25,7 @@ mkdir -p "$AUTOENCODIX_BASE_CONFIG_DIR"
 python generate_jobs.py \
     --architecture vanillix \
     --dataset tcga \
-    --modalities RNA \
+    --modalities RNA CLIN\
     --ontology none \
     --num-hp-configs 1 \
     --num-random-seeds 1 \
