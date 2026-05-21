@@ -35,7 +35,7 @@ You may use any model served by Mistral, for example:
 * `mistral-medium-latest`
 * `mistral-large-latest`
 
-Make sure the `model_name` you pass to `.expalain` matches an available Mistral model.
+Make sure the `model_name` you pass to `.explain` matches an available Mistral model.
 
 ---
 
@@ -55,6 +55,22 @@ Your `model_name` must match exactly the name of the model served by Ollama:
 * `deepseek-r1:8b`
 
 ---
+
+## 3. Using Openrouter
+
+To use a widespread options of models you can use Openrouter. For this simply set a environment variable in your terminal with: 
+
+`export OPENROUTER_PREMIUM_API_KEY="sk-my-key"`
+
+## 4. Using ScaDS-LLM server
+
+If you are a ScaDS.AI member or have a ZIH TU Dresden account, you can use our self-hosted LLM server (https://llm.scads.ai/docs/).
+
+To enable this, set an environment variable like this: 
+
+`export SCADS_LLM_API_KEY="sk-my-key"`
+
+``
 
 # 🧬 Using `.explain()` for Gene Expression Interpretation
 

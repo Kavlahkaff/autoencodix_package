@@ -1,13 +1,14 @@
+import warnings
 from enum import Enum
-from typing import Any, Dict, Literal, Optional, List, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import (
     BaseModel,
+    ConfigDict,
     Field,
+    ValidationInfo,
     field_validator,
     model_validator,
-    ConfigDict,
-    ValidationInfo,
 )
 
 
@@ -189,6 +190,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     model_config = ConfigDict(extra="forbid")
     # Datasets configuration --------------------------------------------------
     data_config: DataConfig = DataConfig(data_info={})
+    annotation_columns: Optional[List[str]] = Field(default=None)
     img_path_col: str = Field(
         default="img_paths",
         description="When working with images, we except a column in your annotation file that specifies the path of the image for a particular sample. Here you can define the name of this column",
@@ -251,8 +253,19 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     save_memory: bool = Field(
         default=False, description="If set to True we don't store TrainingDynamics"
     )
+    save_vram: bool = Field(
+        default=False,
+        description="If set to True we move intermediate results to CPU to save GPU VRAM, but this will be slower",
+    )
     learning_rate: float = Field(
         default=0.001, gt=0, description="Learning rate for optimization"
+    )
+    compile_model: bool = Field(
+        default=False,
+        description="If set to True we compile the model with torch.compile",
+    )
+    pin_memory: bool = Field(
+        default=False, description="Pin memory for faster data transfer"
     )
     batch_size: int = Field(
         default=32,
@@ -319,6 +332,12 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=0.75,
         ge=0.0,
         description="For the Maskix: if >0.5 this gives more weight for the correct reconstruction of corrupted input",
+    )
+    maskix_architecture: Literal["scMAE", "custom"] = Field(
+        default="scMAE",
+        description="If you want to customize your maskix architecture \
+                    via 'n_layers' or 'enc_factor, you need to set this to 'custom'. \
+                    Otherwise, the architecture for the scMAE from  https://doi.org/10.1093/bioinformatics/btae020 is used",
     )
     min_samples_per_split: int = Field(
         default=1, ge=1, description="Minimum number of samples per split"
@@ -391,9 +410,35 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=False, description="Whether to ensure reproducibility"
     )
     global_seed: int = Field(default=1, ge=0, description="Global random seed")
+    profiling: bool = Field(
+        default=False,
+        description="Internal Only: if set to true runs torch.profiler on xmodalix trainer",
+    )
+    profile_logs: str = Field(default="profile")
 
     ##### VALIDATION ##### -----------------------------------------------------
     ##### ----------------- -----------------------------------------------------
+
+    @model_validator(mode="after")
+    def handle_backward_compatibility(self) -> "DefaultConfig":
+        """Handle migration of annotation_columns from DataConfig to DefaultConfig."""
+        if self.data_config.annotation_columns is not None:
+            if self.annotation_columns is not None:
+                warnings.warn(
+                    "annotation_columns is set in both DefaultConfig and DataConfig. "
+                    "Using the value from DefaultConfig."
+                )
+                self.data_config.annotation_columns = self.annotation_columns
+            else:
+                warnings.warn(
+                    "annotation_columns in DataConfig is deprecated. "
+                    "Please set it directly in DefaultConfig instead."
+                )
+                self.annotation_columns = self.data_config.annotation_columns
+        else:
+            self.data_config.annotation_columns = self.annotation_columns
+        return self
+
     @field_validator("data_config")
     @classmethod
     def validate_data_config(cls, data_config: DataConfig):

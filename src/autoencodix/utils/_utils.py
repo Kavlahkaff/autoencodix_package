@@ -4,7 +4,8 @@ Use of OOP would be overkill for the simple functions in this module.
 """
 
 from pathlib import Path
-import zipfile
+
+# import zipfile
 import inspect
 import os
 from collections import defaultdict
@@ -16,6 +17,7 @@ from autoencodix.utils._result import Result
 
 import dill as pickle  # type: ignore
 import torch
+import pandas as pd
 from matplotlib import pyplot as plt
 
 from autoencodix.configs.default_config import DefaultConfig
@@ -318,17 +320,21 @@ class Saver:
 
         self._save_pipeline_object(self.pipeline)
 
-        with zipfile.ZipFile(
-            os.path.join(self.folder, f"{self.file_stem}.zip"), "w"
-        ) as archive:
-            archive.write(self.file_path)
-            archive.write(self.preprocessor_path)
-            for model_state_path in self.model_state_paths:
-                archive.write(model_state_path)
-        os.remove(self.file_path)
-        os.remove(self.preprocessor_path)
-        for model_state_path in self.model_state_paths:
-            os.remove(model_state_path)
+        ## REMOVING Zip functionality as it causes issues with filesystems
+        # with zipfile.ZipFile(
+        #     os.path.join(self.folder, f"{self.file_stem}.zip"), "w"
+        # ) as archive:
+        #     arcname = self.file_name
+        #     archive.write(self.file_path , arcname=arcname)
+        #     arcname = f"{self.file_stem}_preprocessor.pkl"
+        #     archive.write(self.preprocessor_path, arcname=arcname)
+        #     for model_state_path in self.model_state_paths:
+        #         arcname = f"{self.file_stem}_model.pth"
+        #         archive.write(model_state_path, arcname=arcname)
+        # os.remove(self.file_path)
+        # os.remove(self.preprocessor_path)
+        # for model_state_path in self.model_state_paths:
+        #     os.remove(model_state_path)
 
     def _save_pipeline_object(self, pipeline: "BasePipeline"):
         try:
@@ -387,6 +393,8 @@ class Saver:
         for f in fields(obj):
             # we keep the adata_latent space as a "core result"
             if f.name == "adata_latent":
+                continue
+            if f.name == "losses" or f.name == "sub_losses":  # Keep loss dynamics
                 continue
             if f.name == "model":
                 # we need to keep the instantiated class, so we can load the state dict
@@ -447,10 +455,15 @@ class Loader:
         Returns:
             The loaded BasePipeline object, or None on error.
         """
-        with zipfile.ZipFile(
-            os.path.join(self.folder, f"{self.file_stem}.zip"), "r"
-        ) as archive:
-            archive.extractall()
+        ## REMOVING Zip functionality since it causes issues with filesystems
+        # try:
+        #     with zipfile.ZipFile(
+        #         os.path.join(self.folder, f"{self.file_stem}.zip"), "r"
+        #     ) as archive:
+        #         archive.extractall()
+        # except:
+        #     print(f"Error extracting zip file at {self.file_path}")
+        #     print("Attempting to load without extraction...")
 
         loaded_obj = self._load_pipeline_object()
         if loaded_obj is None:
@@ -645,3 +658,33 @@ def find_translation_keys(
     assert from_key_final is not None and to_key_final is not None
 
     return {"from": from_key_final, "to": to_key_final}
+
+
+def preprocess_explanations(
+    df: pd.DataFrame, n: int = 10, max_dims: int = 8
+) -> Dict[str, List[str]]:
+    """
+    Transform a DataFrame of gene attributions into a dictionary mapping each
+    (selected) latent dimension to its top-n genes.
+
+    The function:
+    - Computes the mean attribution for each latent dimension.
+    - Selects the top `max_dims` most informative dimensions (highest mean).
+    - Extracts the top-n genes for each selected dimension.
+
+    Args:
+        df: Output DataFrame of gene attributions from explainix.
+        n: Number of top genes to include per latent dimension.
+        max_dims: Maximum number of latent dimensions to retain.
+
+    Returns:
+        Dictionary with latent dimensions as keys and lists of top gene names as values.
+    """
+    # Identify top latent dimensions by mean attribution
+    top_dims = df.mean(axis=0).nlargest(max_dims).index
+
+    result = {}
+    for col in top_dims:
+        result[col] = df.nlargest(n, col).index.tolist()
+
+    return result

@@ -1,6 +1,5 @@
 import abc
 from typing import Dict, Optional, Tuple, Type, Union, Any, Literal, List, Callable
-
 import warnings
 import anndata as ad  # type: ignore
 import numpy as np
@@ -21,8 +20,10 @@ from autoencodix.data.datapackage import DataPackage
 # from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.base._base_evaluator import BaseEvaluator
 from autoencodix.utils._result import Result
-from autoencodix.utils._utils import Loader, Saver, get_dataset
+from autoencodix.utils.prompts import PROMPT
+from autoencodix.utils._utils import Loader, Saver, get_dataset, preprocess_explanations
 from autoencodix.utils.adata_converter import AnnDataConverter
+from autoencodix.utils._explainer import FeatureImportanceExplainer
 from autoencodix.utils._llm_explainer import LLMExplainer
 from autoencodix.configs.default_config import DataCase, DataInfo, DefaultConfig
 
@@ -74,8 +75,8 @@ class BasePipeline(abc.ABC):
         data: Optional[
             Union[DataPackage, DatasetContainer, ad.AnnData, MuData, pd.DataFrame, dict]  # type: ignore[invalid-type-form]
         ],
-        visualizer: Optional[BaseVisualizer] = None,
-        evaluator: Optional[BaseEvaluator] = None,
+        visualizer: Optional[Type[BaseVisualizer]] = None,
+        evaluator: Optional[Type[BaseEvaluator]] = None,
         result: Optional[Result] = None,
         config: Optional[DefaultConfig] = None,
         custom_split: Optional[Dict[str, np.ndarray]] = None,
@@ -105,8 +106,7 @@ class BasePipeline(abc.ABC):
             TypeError: If inputs have incorrect types.
         """
         if not hasattr(self, "_default_config"):
-            raise ValueError(
-                """
+            raise ValueError("""
                             The _default_config attribute has not been specified in your pipeline class.
 
                             Example:
@@ -116,9 +116,8 @@ class BasePipeline(abc.ABC):
                             _default_config in its corresponding pipeline class.
 
                             For more details, please refer to the 'how to add a new architecture' section in our documentation.
-                            """
-            )
-
+                            """)
+        self.model_map = kwargs.pop("model_map", None)
         self._validate_config(config=config)
         self._validate_user_input(data=data)
         self.masking_fn = masking_fn
@@ -479,6 +478,7 @@ class BasePipeline(abc.ABC):
             masking_fn_kwargs=(
                 self.masking_fn_kwargs if hasattr(self, "masking_fn_kwargs") else None
             ),
+            model_map=self.model_map,
         )
 
         trainer_result: Result = self._trainer.train()
@@ -892,10 +892,15 @@ class BasePipeline(abc.ABC):
         metric_class: str = "roc_auc_ovo",  # Default is 'roc_auc_ovo' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
         metric_regression: str = "r2",  # Default is 'r2'
         reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
+        reference_reducer: dict = {},  # Option to provide pre-fitted reducer objects for PCA, UMAP or TSNE, e.g. {"PCA": pca_reducer, "UMAP": umap_reducer, "TSNE": tsne_reducer}
         split_type: Literal[
             "use-split", "CV-5", "LOOC"
         ] = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
         n_downsample: Optional[int] = 10000,
+        top_k_classes: Optional[int] = 20,
+        exclude_classes: Union[
+            list, None
+        ] = None,  # Default is None, if provided exclude these classes from evaluation
     ) -> Result:
         """TODO"""
         if self.evaluator is None:
@@ -949,8 +954,11 @@ class BasePipeline(abc.ABC):
             metric_class=metric_class,
             metric_regression=metric_regression,
             reference_methods=reference_methods,
+            reference_reducer=reference_reducer,
             split_type=split_type,
             n_downsample=n_downsample,
+            top_k_classes=top_k_classes,
+            exclude_classes=exclude_classes,
         )
 
         _: Any = self.visualizer._plot_evaluation(result=self.result)
@@ -1150,6 +1158,8 @@ class BasePipeline(abc.ABC):
                 prior has incompatible dimensions.
             TypeError: If latent_prior is not a numpy array or tensor.
         """
+        self._trainer.setup_trainer(old_model=self.result.model)
+
         if not isinstance(n_samples, int) or n_samples <= 0:
             if latent_prior is None:
                 raise ValueError(
@@ -1191,13 +1201,45 @@ class BasePipeline(abc.ABC):
 
     def explain(
         self,
-        explainer: Any,
-        baseline_type: Literal["mean", "random_sample"] = "mean",
+        method: Literal["DeepLiftShap", "IntegratedGradients"] = "DeepLiftShap",
+        sel_latent_dim: Union[list, int, str, None] = None,
+        input_type: Literal["random", "grouped"] = "grouped",
+        input_group: Optional[str] = None,
+        baseline_type: Literal["mean", "random", "grouped"] = "mean",
+        baseline_group: str = "all",
+        anno_col: Optional[str] = None,
         n_subset: int = 100,
+        seed_int: int = 12,
+        split: Literal["train", "test", "valid"] = "train",
         llm_explain: bool = False,
-        llm_client: Literal["ollama", "mistral"] = "mistral",
-        llm_model: str = "mistral-medium-latest",
-    ):  # TODO Vincent: add return type
+        llm_client: Literal["ollama", "mistral", "openrouter", "scads-llm"] = "mistral",
+        llm_model: str = "mistral-large-latest",
+        top_n_genes: int = 40,
+        prompt: str = PROMPT,
+    ) -> pd.DataFrame:
+        """Runs the feature-importance explainer and returns gene-by-latent-dimension attribution scores.
+
+        Args:
+            method:  Specifies which attribution algorithm to use for explaining the model.
+            sel_latent_dim: Specifies which latent dimension(s) to explain. If None, all dimensions will be explained.
+            input_type: Specifies whether the feature-importance algorithm should use 'random' samples or 'grouped' samples (see input_group) as input for the attribution computation.
+            input_group: If input_type is 'grouped', this specifies which subset in anno_col to filter for to use as input for the attribution computation.
+            baseline_type: Specifies whether the feature-importance algorithm should use the 'mean' baseline, a 'random'-sample baseline, or samples from a 'grouped' baseline (see baseline_group).
+            baseline_group: Specifies whether the baseline is computed using all data (default) or which subset in anno_col to filter for.
+            anno_col: If baseline_group is not 'all', this specifies the annotation column used to filter the baseline data.
+            n_subset: Specifies the number of cells to use when subsampling for the attribution computation.
+            seed_int: Defines the random seed used for reproducible subsampling and attribution calculations.
+            split: The split to use for feature importance calculation (train, valid, test), default is train.
+            llm_explain: Whether to use LLM explainers for feature importance calculation.
+            llm_client: The LLM client to use for feature importance calculation.
+            llm_model: The LLM model to use for feature importance calculation.
+            top_n_genes: How many top (contribution to embedding) genes to consider for LLM explanation.
+
+        Returns:
+            pd.DataFrame: The generated samples in the input space.
+                A DataFrame of attribution scores with genes as the index and latent dimensions as columns.
+                Each entry represents the contribution of a given gene to a specific latent dimension.
+        """
         my_converter = AnnDataConverter()
         dataset: Optional[DatasetContainer] = get_dataset(self.result)
         if dataset is None:
@@ -1206,15 +1248,13 @@ class BasePipeline(abc.ABC):
                 "This happens if you used .save and .load, and did not run .predict before."
                 "This can also happen if you run .explain before .preprocess or .fit."
             )
-        adata_train: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
-            dataset, split="train"
+        adata: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
+            dataset, split=split
         )
-        adata_test: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
-            dataset, split="test"
-        )
-        adata_valid: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
-            dataset, split="valid"
-        )
+        if adata is None:
+            raise ValueError(
+                "There has been an error converting the dataset to AnnData."
+            )
         model = self.result.model
         if model is None:
             raise ValueError(
@@ -1222,26 +1262,94 @@ class BasePipeline(abc.ABC):
                 "This happens if you used .save and .load, and did not run .fit before."
                 "This can also happen if you run .explain before .fit."
             )
-        # TODO Vincent: Implement feature importance explanation
-        # Best with Explainer class that gets initialized here and has a method
-        # Maybe like:
-        # explainer = FeatureImportanceExplainer(adata_train, adata_test, model, explainer, ...)
-        # output = explainer.explain()
-        # also note tha adata_<split> can be None, if the split is not available
-        # so best to check this before concatenating or using them
+        # Validate sel_latent_dim and convert from string to int if necessary
+        if sel_latent_dim is not None:
+            if isinstance(sel_latent_dim, str):
+                if self.ontologies is None:
+                    raise ValueError(
+                        "sel_latent_dim is a string, but no ontologies are available in the pipeline. Please provide ontologies in the config or set sel_latent_dim to an int or list of ints."
+                    )
+                if sel_latent_dim not in self.ontologies[0].keys():
+                    raise ValueError(
+                        f"sel_latent_dim is set to '{sel_latent_dim}', but this is not a key in the available ontologies: {list(self.ontologies[0].keys())}. Please provide a valid ontology key or set sel_latent_dim to an int or list of ints."
+                    )
+                sel_latent_dim = list(self.ontologies[0].keys()).index(sel_latent_dim)
+            elif isinstance(sel_latent_dim, int):
+                if sel_latent_dim < 0 or sel_latent_dim >= self.config.latent_dim:
+                    raise ValueError(
+                        f"sel_latent_dim is set to {sel_latent_dim}, but this is out of bounds for the latent dimension size of {self.config.latent_dim}. Please provide a valid integer index or set sel_latent_dim to None to explain all dimensions."
+                    )
+            elif isinstance(sel_latent_dim, list):
+                # Check if entries are strings or integers and validate accordingly
+                sel_latent_dim_validated = []
+                for dim in sel_latent_dim:
+                    if isinstance(dim, str):
+                        if self.ontologies is None:
+                            raise ValueError(
+                                "sel_latent_dim is a list of strings, but no ontologies are available in the pipeline. Please provide ontologies in the config or set sel_latent_dim to a list of ints."
+                            )
+                        if dim not in self.ontologies[0].keys():
+                            raise ValueError(
+                                f"sel_latent_dim contains '{dim}', but this is not a key in the available ontologies: {list(self.ontologies[0].keys())}. Please provide valid ontology keys or set sel_latent_dim to a list of ints."
+                            )
+                        sel_latent_dim_validated.append(
+                            list(self.ontologies[0].keys()).index(dim)
+                        )
+                    elif isinstance(dim, int):
+                        if dim < 0 or dim >= self.config.latent_dim:
+                            raise ValueError(
+                                f"sel_latent_dim contains {dim}, but this is out of bounds for the latent dimension size of {self.config.latent_dim}. Please provide valid integer indices or set sel_latent_dim to None to explain all dimensions."
+                            )
+                        sel_latent_dim_validated.append(dim)
+                    else:
+                        raise ValueError(
+                            f"sel_latent_dim list contains entries of type {type(dim)}, but only str and int are allowed. Please ensure all entries are either strings corresponding to ontology keys or integers corresponding to latent dimension indices."
+                        )
+                sel_latent_dim = sel_latent_dim_validated
+            else:
+                raise ValueError(
+                    f"sel_latent_dim must be either an int, a str, a list of ints or a list of strs, got {type(sel_latent_dim)}. Please provide a valid type for sel_latent_dim."
+                )
+
+        print("Start feature attribution calculation")
+        explainer = FeatureImportanceExplainer(
+            adata=adata["global"],
+            model=model,
+            n_subset=n_subset,
+            method=method,
+            sel_latent_dim=sel_latent_dim,
+            input_type=input_type,
+            input_group=input_group,
+            baseline_type=baseline_type,
+            baseline_group=baseline_group,
+            anno_col=anno_col,
+            seed_int=seed_int,
+        )
+        df_attributions = explainer.explain()
 
         if llm_explain:
-            # TODO Vincent:
-            # Je nachdem wie die Gene Liste aussieht, müsstet du noch in src/autoencodix/utils/_llm_explainer.py
-            # in _init_prompt anpassen, wie der prompt gebaut wird. Ich gehe jetzt von einer Liste aus String aus, aber
-            # ich wusste nicht genau was dein return Typ ist.
+            gene_attributions: Dict[str, List] = preprocess_explanations(
+                df=df_attributions, n=top_n_genes, max_dims=8
+            )
+            if len(gene_attributions) > 8:
+                warnings.warn(
+                    "You requested LLM-generated explanations for each latent dimension. "
+                    "However, more than eight latent dimensions were provided. To avoid excessively long "
+                    "and computationally intensive output, only the eight most informative latent "
+                    "dimensions will be analyzed."
+                )
 
             llm_explainer = LLMExplainer(
                 client_name=llm_client,
                 model_name=llm_model,
-                gene_list=["GeneA", "GeneB", "GeneC"],  # Example gene list
+                genes_to_latent=gene_attributions,  # Example gene list
+                prompt=prompt,
             )
+            print("Start LLM explanation generation")
             explanation = llm_explainer.explain()
-            print("LLM Explanation:")
-            print(explanation)
-            return explanation
+            self.result.embedding_explanations = explanation
+        self.result.embedding_attributions = df_attributions
+        return df_attributions
+
+    def impute(self, corrupted_tensor: torch.Tensor):
+        raise NotImplementedError("Impute method only implemented for Maskix pipeline.")

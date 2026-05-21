@@ -1,6 +1,8 @@
 from typing import Any, Dict, Optional, Tuple, Union
 
 import mudata as md
+
+import anndata as ad
 import pandas as pd
 import torch
 
@@ -133,23 +135,37 @@ class XModalPreprocessor(GeneralPreprocessor):
                     metadata=metadata,
                 )
             elif dp_key == "multi_sc":
-                if not isinstance(data, md.MuData):
-                    raise ValueError()
-                for mod_key, mod_data in data.mod.items():
-                    selected_layers = self.config.data_config.data_info[
-                        mod_key
-                    ].selected_layers
-                    if not selected_layers[0] == "X" and len(selected_layers) != 1:
-                        raise NotImplementedError(
-                            "Xmodalix works only with X layer of single cell data as of now"
+                # unpaired multi_sc case with adata dicts
+                if isinstance(data, dict):
+                    for adata_name, adata_v in data.items():
+                        self._validate_layers(data_name=adata_name)
+                        if not isinstance(adata_v, ad.AnnData):
+                            raise TypeError(
+                                f"Input data has unsupported data type: {type(data)}"
+                            )
+                        dataset_dict[k] = NumericDataset(
+                            data=adata_v.X,
+                            config=self.config,
+                            sample_ids=adata_v.obs_names,
+                            feature_ids=adata_v.var_names,
+                            split_indices=indices,
+                            metadata=adata_v.obs,
                         )
-                    dataset_dict[k] = NumericDataset(
-                        data=mod_data.X,
-                        config=self.config,
-                        sample_ids=mod_data.obs_names,
-                        feature_ids=mod_data.var_names,
-                        split_indices=indices,
-                        metadata=mod_data.obs,
+
+                elif isinstance(data, md.MuData):
+                    for mod_key, mod_data in data.mod.items():
+                        self._validate_layers(data_name=mod_key)
+                        dataset_dict[k] = NumericDataset(
+                            data=mod_data.X,
+                            config=self.config,
+                            sample_ids=mod_data.obs_names,
+                            feature_ids=mod_data.var_names,
+                            split_indices=indices,
+                            metadata=mod_data.obs,
+                        )
+                else:
+                    raise TypeError(
+                        f"Input data has unsupported data type: {type(data)}"
                     )
 
             elif dp_key == "annotation":
@@ -160,3 +176,13 @@ class XModalPreprocessor(GeneralPreprocessor):
                     f"Got datapackage attribute: {k}, probably you have added an attribute to the Datapackage class without adjusting this method. Only supports: ['multi_bulk', 'multi_sc', 'img' and 'annotation']"
                 )
         return dataset_dict
+
+    def _validate_layers(self, data_name: str):
+        selected_layers = self.config.data_config.data_info[data_name].selected_layers
+        if not selected_layers[0] == "X" and len(selected_layers) != 1:
+            import warnings
+
+            warnings.warn(
+                "Xmodalix works only with X layer of single cell data as of now"
+                "Using X Layer, discarding selected layers"
+            )

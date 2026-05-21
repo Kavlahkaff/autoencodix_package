@@ -176,6 +176,12 @@ class GeneralPreprocessor(BasePreprocessor):
             mudata: md.MuData = data.multi_sc.get(  # ty: ignore[invalid-type-form]
                 "multi_sc", None
             )  # ty: ignore[invalid-type-form]
+            first_mod = next(iter(mudata.mod.values()))
+            # for single cell we know, we have a shared metadata
+            # so we can use the first modality as reference
+            # otherwise when using .obs from mudata, we get
+            # unintutive column names with modality name prefix
+
             if mudata is None:
                 raise NotImplementedError(
                     "Unpaired multi Single Cell case not implemented vor Varix and Vanillix, set requires_paired=True in config"
@@ -191,7 +197,7 @@ class GeneralPreprocessor(BasePreprocessor):
                 data=combined_data,
                 config=self.config,
                 split_ids=split_ids,
-                metadata=mudata.obs,
+                metadata=first_mod.obs,
                 ids=mudata.obs_names.tolist(),
                 feature_ids=feature_ids,
             )

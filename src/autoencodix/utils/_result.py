@@ -113,6 +113,8 @@ class Result:
 
     # Embedding evaluation results
     embedding_evaluation: pd.DataFrame = field(default_factory=pd.DataFrame)
+    embedding_attributions: pd.DataFrame = field(default_factory=pd.DataFrame)
+    embedding_explanations: Dict[str, str] = field(default_factory=dict)
 
     # plots: Dict[str, Any] = field(
     #     default_factory=nested_dict
@@ -344,11 +346,8 @@ class Result:
             import warnings
 
             warnings.warn(
-                f"We could not create visualizations for the loss plots.\n"
-                f"This usually happens if you try to visualize after saving and loading "
-                f"the pipeline object with `save_all=False`. This memory-efficient saving mode "
-                f"does not retain past training loss data.\n\n"
-                f"Original error message: {e}"
+                f"Could not retrieve latent representations for epoch {epoch} and split '{split}'. "
+                f"Returning empty DataFrame. This may be due to missing data in the Result object or incorrect keys.\n\n"
             )
 
             return pd.DataFrame()
@@ -379,5 +378,16 @@ class Result:
             reconstructions = reconstructions[modality]
             ids = ids[modality]
 
-        cols = self.datasets.train.feature_ids
+        if self.new_datasets is not None:
+            datasets = self.new_datasets
+
+        # cols = self.datasets.train.feature_ids
+        if split == "train" and datasets is not None and datasets.train is not None:
+            cols = datasets.train.feature_ids
+        elif split == "valid" and datasets is not None and datasets.valid is not None:
+            cols = datasets.valid.feature_ids
+        elif split == "test" and datasets is not None and datasets.test is not None:
+            cols = datasets.test.feature_ids
+        else:
+            cols = [f"Feature_{i}" for i in range(reconstructions.shape[1])]
         return pd.DataFrame(reconstructions, index=ids, columns=cols)

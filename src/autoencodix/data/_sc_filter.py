@@ -135,6 +135,7 @@ class SingleCellFilter:
             return self._presplit_processing(mudata=multi_sc)
         res = {k: None for k in multi_sc.keys()}
         for k, v in multi_sc.items():
+
             processed = self._presplit_processing(mudata=v)
             res[k] = processed
         return res
