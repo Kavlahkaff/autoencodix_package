@@ -47,8 +47,12 @@ class GeneralEvaluator(BaseEvaluator):
         n_downsample: Union[
             int, None
         ] = 10000,  # Default is 10000, if provided downsample to this number of samples for faster evaluation. Set to None to disable downsampling.
-        top_k_classes: Union[int, None] = 20,  # Default is 20, if provided restrict classification tasks to top k classes, others combined into "other"
-        exclude_classes: Union[list, None] = None,  # Default is None, if provided exclude these classes from evaluation
+        top_k_classes: Union[
+            int, None
+        ] = 20,  # Default is 20, if provided restrict classification tasks to top k classes, others combined into "other"
+        exclude_classes: Union[
+            list, None
+        ] = None,  # Default is None, if provided exclude these classes from evaluation
     ) -> Result:
         """Evaluates the performance of machine learning models on various feature representations and clinical parameters.
 
@@ -193,7 +197,13 @@ class GeneralEvaluator(BaseEvaluator):
 
                 #     df = self._load_input_for_ml_xmodal(task_xmodal, datasets, result, modality=modality)
                 # else:
-                df = self._load_input_for_ml(task, datasets, result, n_downsample, reference_reducer=reference_reducer)
+                df = self._load_input_for_ml(
+                    task,
+                    datasets,
+                    result,
+                    n_downsample,
+                    reference_reducer=reference_reducer,
+                )
 
                 if params == "all":
                     params = clin_data.columns.tolist()
@@ -366,17 +376,27 @@ class GeneralEvaluator(BaseEvaluator):
                         f"Warning: For task parameter {task_param}, some classes have less samples ({min_class_count}) than the number of CV folds ({cv_folds}). Combining these classes into one class 'other' for evaluation."
                     )
                     y = y.apply(
-                        lambda x: x
-                        if clin_data[task_param].value_counts().loc[x] >= cv_folds
-                        else "other"
+                        lambda x: (
+                            x
+                            if clin_data[task_param].value_counts().loc[x] >= cv_folds
+                            else "other"
+                        )
                     )
                 # Restrict number of classes to top k classes
-                if top_k_classes is not None: 
-                    if len(y.unique()) > top_k_classes:                
-                        top_k_classes_list = y.value_counts().nlargest(top_k_classes).index
+                if top_k_classes is not None:
+                    if len(y.unique()) > top_k_classes:
+                        top_k_classes_list = (
+                            y.value_counts().nlargest(top_k_classes).index
+                        )
                         y = y.apply(lambda x: x if x in top_k_classes_list else "other")
             scores = cross_validate(
-                sklearn_ml, df, y, cv=cv_folds, scoring=metric, return_train_score=True, n_jobs=-1
+                sklearn_ml,
+                df,
+                y,
+                cv=cv_folds,
+                scoring=metric,
+                return_train_score=True,
+                n_jobs=-1,
             )
 
             # Output
@@ -476,10 +496,14 @@ class GeneralEvaluator(BaseEvaluator):
         if len(Y_train.unique()) > 1:  # ty: ignore
 
             # Restrict number of classes to top k classes
-            if top_k_classes is not None and ml_type == "classification": 
-                if len(Y_train.unique()) > top_k_classes:                
-                    top_k_classes_list = Y_train.value_counts().nlargest(top_k_classes).index
-                    Y_train = Y_train.apply(lambda x: x if x in top_k_classes_list else "other")
+            if top_k_classes is not None and ml_type == "classification":
+                if len(Y_train.unique()) > top_k_classes:
+                    top_k_classes_list = (
+                        Y_train.value_counts().nlargest(top_k_classes).index
+                    )
+                    Y_train = Y_train.apply(
+                        lambda x: x if x in top_k_classes_list else "other"
+                    )
             sklearn_ml.fit(X_train, Y_train)  # ty: ignore
 
             # eval on all splits
@@ -506,11 +530,11 @@ class GeneralEvaluator(BaseEvaluator):
                     )
 
                 if ml_type == "classification":
-                    if top_k_classes is not None and (len(Y_train.unique()) > top_k_classes):
+                    if top_k_classes is not None and (
+                        len(Y_train.unique()) > top_k_classes
+                    ):
                         # Adjust Y to only contain top k classes and other as for Y_train
-                        Y = Y.apply(
-                            lambda x: x if x in top_k_classes_list else "other"
-                        )
+                        Y = Y.apply(lambda x: x if x in top_k_classes_list else "other")
                     # Check that Y has only classes which are present in Y_train
                     if (
                         len(
@@ -570,7 +594,11 @@ class GeneralEvaluator(BaseEvaluator):
 
     @staticmethod
     def _load_input_for_ml(
-        task: str, dataset: DatasetContainer, result: Result, n_downsample: Union[int, None] = None, reference_reducer: dict = {}
+        task: str,
+        dataset: DatasetContainer,
+        result: Result,
+        n_downsample: Union[int, None] = None,
+        reference_reducer: dict = {},
     ) -> pd.DataFrame:
         """Loads and processes input data for various machine learning tasks based on the specified task type.
 
@@ -662,7 +690,7 @@ class GeneralEvaluator(BaseEvaluator):
                 else:
                     reducer = UMAP(n_components=result.model.config.latent_dim)
                     reducer.fit(df_processed)
-                    
+
                 df = pd.DataFrame(
                     reducer.transform(df_processed), index=df_processed.index
                 )
@@ -677,7 +705,7 @@ class GeneralEvaluator(BaseEvaluator):
                 else:
                     reducer = PCA(n_components=result.model.config.latent_dim)
                     reducer.fit(df_processed)
-                    
+
                 df = pd.DataFrame(
                     reducer.transform(df_processed), index=df_processed.index
                 )
@@ -687,7 +715,7 @@ class GeneralEvaluator(BaseEvaluator):
                 else:
                     reducer = TSNE(n_components=result.model.config.latent_dim)
                     reducer.fit(df_processed)
-                    
+
                 df = pd.DataFrame(
                     reducer.transform(df_processed), index=df_processed.index
                 )

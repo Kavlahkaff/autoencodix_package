@@ -4,6 +4,7 @@ Use of OOP would be overkill for the simple functions in this module.
 """
 
 from pathlib import Path
+
 # import zipfile
 import inspect
 import os
@@ -393,7 +394,7 @@ class Saver:
             # we keep the adata_latent space as a "core result"
             if f.name == "adata_latent":
                 continue
-            if f.name == "losses" or f.name == "sub_losses": # Keep loss dynamics
+            if f.name == "losses" or f.name == "sub_losses":  # Keep loss dynamics
                 continue
             if f.name == "model":
                 # we need to keep the instantiated class, so we can load the state dict
@@ -454,7 +455,7 @@ class Loader:
         Returns:
             The loaded BasePipeline object, or None on error.
         """
-        ## REMOVING Zip functionality since it causes issues with filesystems 
+        ## REMOVING Zip functionality since it causes issues with filesystems
         # try:
         #     with zipfile.ZipFile(
         #         os.path.join(self.folder, f"{self.file_stem}.zip"), "r"

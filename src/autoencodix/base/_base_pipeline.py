@@ -106,8 +106,7 @@ class BasePipeline(abc.ABC):
             TypeError: If inputs have incorrect types.
         """
         if not hasattr(self, "_default_config"):
-            raise ValueError(
-                """
+            raise ValueError("""
                             The _default_config attribute has not been specified in your pipeline class.
 
                             Example:
@@ -117,8 +116,7 @@ class BasePipeline(abc.ABC):
                             _default_config in its corresponding pipeline class.
 
                             For more details, please refer to the 'how to add a new architecture' section in our documentation.
-                            """
-            )
+                            """)
         self.model_map = kwargs.pop("model_map", None)
         self._validate_config(config=config)
         self._validate_user_input(data=data)
@@ -894,13 +892,15 @@ class BasePipeline(abc.ABC):
         metric_class: str = "roc_auc_ovo",  # Default is 'roc_auc_ovo' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
         metric_regression: str = "r2",  # Default is 'r2'
         reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
-        reference_reducer: dict = {}, # Option to provide pre-fitted reducer objects for PCA, UMAP or TSNE, e.g. {"PCA": pca_reducer, "UMAP": umap_reducer, "TSNE": tsne_reducer}
+        reference_reducer: dict = {},  # Option to provide pre-fitted reducer objects for PCA, UMAP or TSNE, e.g. {"PCA": pca_reducer, "UMAP": umap_reducer, "TSNE": tsne_reducer}
         split_type: Literal[
             "use-split", "CV-5", "LOOC"
         ] = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
         n_downsample: Optional[int] = 10000,
         top_k_classes: Optional[int] = 20,
-        exclude_classes: Union[list, None] = None,  # Default is None, if provided exclude these classes from evaluation
+        exclude_classes: Union[
+            list, None
+        ] = None,  # Default is None, if provided exclude these classes from evaluation
     ) -> Result:
         """TODO"""
         if self.evaluator is None:
@@ -1159,7 +1159,7 @@ class BasePipeline(abc.ABC):
             TypeError: If latent_prior is not a numpy array or tensor.
         """
         self._trainer.setup_trainer(old_model=self.result.model)
-        
+
         if not isinstance(n_samples, int) or n_samples <= 0:
             if latent_prior is None:
                 raise ValueError(
@@ -1273,7 +1273,7 @@ class BasePipeline(abc.ABC):
                     raise ValueError(
                         f"sel_latent_dim is set to '{sel_latent_dim}', but this is not a key in the available ontologies: {list(self.ontologies[0].keys())}. Please provide a valid ontology key or set sel_latent_dim to an int or list of ints."
                     )
-                sel_latent_dim = list(self.ontologies[0].keys()).index(sel_latent_dim)  
+                sel_latent_dim = list(self.ontologies[0].keys()).index(sel_latent_dim)
             elif isinstance(sel_latent_dim, int):
                 if sel_latent_dim < 0 or sel_latent_dim >= self.config.latent_dim:
                     raise ValueError(
@@ -1292,7 +1292,9 @@ class BasePipeline(abc.ABC):
                             raise ValueError(
                                 f"sel_latent_dim contains '{dim}', but this is not a key in the available ontologies: {list(self.ontologies[0].keys())}. Please provide valid ontology keys or set sel_latent_dim to a list of ints."
                             )
-                        sel_latent_dim_validated.append(list(self.ontologies[0].keys()).index(dim))
+                        sel_latent_dim_validated.append(
+                            list(self.ontologies[0].keys()).index(dim)
+                        )
                     elif isinstance(dim, int):
                         if dim < 0 or dim >= self.config.latent_dim:
                             raise ValueError(
@@ -1308,8 +1310,8 @@ class BasePipeline(abc.ABC):
                 raise ValueError(
                     f"sel_latent_dim must be either an int, a str, a list of ints or a list of strs, got {type(sel_latent_dim)}. Please provide a valid type for sel_latent_dim."
                 )
-   
-        print("Start feature attribution calculation")    
+
+        print("Start feature attribution calculation")
         explainer = FeatureImportanceExplainer(
             adata=adata["global"],
             model=model,
@@ -1321,7 +1323,6 @@ class BasePipeline(abc.ABC):
             baseline_type=baseline_type,
             baseline_group=baseline_group,
             anno_col=anno_col,
-            
             seed_int=seed_int,
         )
         df_attributions = explainer.explain()

@@ -33,11 +33,15 @@ class FeatureImportanceExplainer:
         adata,
         model,
         method: str = "DeepLiftShap",
-        sel_latent_dim: Union[list, int, None] = None, # list or int of latent dimensions to explain, if None explain all
-        n_subset: int = 100, # Randomly sample in input and baseline space for computational efficiency, if n_subset is None use all samples
+        sel_latent_dim: Union[
+            list, int, None
+        ] = None,  # list or int of latent dimensions to explain, if None explain all
+        n_subset: int = 100,  # Randomly sample in input and baseline space for computational efficiency, if n_subset is None use all samples
         seed_int: int = 12,
         input_type: str = "random",  # "random" or "grouped" for selecting subset of inputs to explain
-        input_group: Optional[str] = None,  # column in .obs for grouping inputs must be provided if input_type is "grouped"
+        input_group: Optional[
+            str
+        ] = None,  # column in .obs for grouping inputs must be provided if input_type is "grouped"
         baseline_type: str = "random",  # "random" or "mean" or "grouped" for selecting baseline samples
         baseline_group: str = None,  # column in .obs for grouping inputs must be provided if input_type is "grouped", optional for "mean", ignored for "random"
         anno_col: Optional[str] = None,  # column in .obs for grouping
@@ -66,7 +70,12 @@ class FeatureImportanceExplainer:
         adata_ACX = self.adata_ACX
         gene_names = adata_ACX.var_names
         inputs, baselines = return_inputs_baseline(
-            adata_ACX, self.baseline_group, self.baseline_type, self.anno_col, self.input_type, self.input_group
+            adata_ACX,
+            self.baseline_group,
+            self.baseline_type,
+            self.anno_col,
+            self.input_type,
+            self.input_group,
         )
         # set n_samples to whatever is lowest from: inputs, baselines, n_subset (if not None)
         n_samples = min(inputs.shape[0], baselines.shape[0])
@@ -89,14 +98,20 @@ class FeatureImportanceExplainer:
             indices_keep_baseline = np.arange(baselines.shape[0])
         # for latent_dim in range(self.latent_dim):
         all_attr = []
-        if isinstance(self.sel_latent_dim, list): # Provide list of latent dimensions to explain
+        if isinstance(
+            self.sel_latent_dim, list
+        ):  # Provide list of latent dimensions to explain
             latent_dims = self.sel_latent_dim
-        elif isinstance(self.sel_latent_dim, int): # Provide single latent dimension to explain
+        elif isinstance(
+            self.sel_latent_dim, int
+        ):  # Provide single latent dimension to explain
             latent_dims = [self.sel_latent_dim]
-        elif self.sel_latent_dim is None: # Explain all latent dimensions
+        elif self.sel_latent_dim is None:  # Explain all latent dimensions
             latent_dims = list(range(self.latent_dim))
         else:
-            raise ValueError(f"Invalid sel_latent_dim {self.sel_latent_dim}. Must be int, list of ints, or None.")
+            raise ValueError(
+                f"Invalid sel_latent_dim {self.sel_latent_dim}. Must be int, list of ints, or None."
+            )
 
         for latent_dim in latent_dims:
             print("Calculating attributions for latent dimension:", latent_dim)
@@ -126,11 +141,11 @@ class FeatureImportanceExplainer:
         return df_attributions
 
 
-def return_inputs_baseline(adata, baseline_group, baseline_type, anno_col, input_type, input_group):
+def return_inputs_baseline(
+    adata, baseline_group, baseline_type, anno_col, input_type, input_group
+):
     baseline_torch_all = torch.tensor(
-        adata.X.toarray()
-        if scipy.sparse.issparse(adata.X)
-        else adata.X
+        adata.X.toarray() if scipy.sparse.issparse(adata.X) else adata.X
     )
     ## Define inputs
     if input_type == "grouped":
@@ -140,18 +155,24 @@ def return_inputs_baseline(adata, baseline_group, baseline_type, anno_col, input
             )
         input_adata = adata[adata.obs[anno_col] == input_group]
         inputs = torch.tensor(
-            input_adata.X.toarray() if scipy.sparse.issparse(input_adata.X) else input_adata.X
+            input_adata.X.toarray()
+            if scipy.sparse.issparse(input_adata.X)
+            else input_adata.X
         )
     elif input_type == "random":
         inputs = torch.tensor(
             adata.X.toarray() if scipy.sparse.issparse(adata.X) else adata.X
         )
-    
+
     ## Define baselines
     if baseline_type == "random":
         # Generates a bootstrap random from input in the same size
-        baseline_random = baseline_torch_all[torch.randint(0, baseline_torch_all.size(0), (1,)).item()]
-        baselines = torch.tensor(np.tile(baseline_random, (baseline_torch_all.shape[0], 1)))
+        baseline_random = baseline_torch_all[
+            torch.randint(0, baseline_torch_all.size(0), (1,)).item()
+        ]
+        baselines = torch.tensor(
+            np.tile(baseline_random, (baseline_torch_all.shape[0], 1))
+        )
     elif baseline_type == "grouped":
         if anno_col is None or baseline_group is None:
             raise ValueError(
@@ -167,7 +188,9 @@ def return_inputs_baseline(adata, baseline_group, baseline_type, anno_col, input
         baseline_grouped = base_filtered[
             torch.randint(0, base_filtered.size(0), (1,)).item()
         ]
-        baselines = torch.tensor(np.tile(baseline_grouped, (base_adata_filtered.shape[0], 1)))
+        baselines = torch.tensor(
+            np.tile(baseline_grouped, (base_adata_filtered.shape[0], 1))
+        )
     elif baseline_type == "mean":
         if baseline_group == None:
             baseline_mean = baseline_torch_all.mean(axis=0)  # gene_means
@@ -183,10 +206,12 @@ def return_inputs_baseline(adata, baseline_group, baseline_type, anno_col, input
                 else base_adata_filtered.X
             )
             baseline_mean = base_filtered.mean(axis=0)  # gene_means
-        baselines = torch.tensor(np.tile(baseline_mean, (baseline_torch_all.shape[0], 1)))
+        baselines = torch.tensor(
+            np.tile(baseline_mean, (baseline_torch_all.shape[0], 1))
+        )
     else:
         raise ValueError(f"Invalid baseline_type {baseline_type}.")
-    
+
     # inputs = torch.tensor(
     #     input_adata.X.toarray()
     #     if scipy.sparse.issparse(input_adata.X)

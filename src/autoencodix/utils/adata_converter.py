@@ -35,7 +35,7 @@ class AnnDataConverter:
         metadata.index = metadata.index.astype(str)
 
         var = pd.DataFrame(index=pd.Index(ds.feature_ids, dtype=str))
-        # check if ds.data issparse 
+        # check if ds.data issparse
         if issparse(ds.data):
             x = torch.tensor(ds.data.toarray())
         else:

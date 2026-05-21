@@ -8,7 +8,8 @@ from typing import List, Dict, Any
 
 import requests
 import warnings
-warnings.simplefilter('always', UserWarning)
+
+warnings.simplefilter("always", UserWarning)
 
 
 class LLMExplainer:
@@ -59,7 +60,9 @@ class LLMExplainer:
         elif self._client_name == "openrouter":
             self._openrouter_api_key = os.environ.get("OPENROUTER_PREMIUM_API_KEY")
             if not self._openrouter_api_key:
-                raise ValueError("Environment variable OPENROUTER_PREMIUM_API_KEY not set")
+                raise ValueError(
+                    "Environment variable OPENROUTER_PREMIUM_API_KEY not set"
+                )
             self._openrouter_url = "https://openrouter.ai/api/v1/chat/completions"
         elif self._client_name == "scads-llm":
             self._scads_llm_api_key = os.environ.get("SCADS_LLM_API_KEY")
@@ -133,7 +136,10 @@ class LLMExplainer:
             raw_output = self._get_llm_answer(question=prompt)
             if len(raw_output) == 0:
                 import warnings
-                warnings.warn(f"Received empty response from LLM for latent dimension {key}. Skipping.")
+
+                warnings.warn(
+                    f"Received empty response from LLM for latent dimension {key}. Skipping."
+                )
                 continue
             # ---- TRY TO PARSE JSON ----
             try:
@@ -204,7 +210,9 @@ class LLMExplainer:
         elif self._client_name == "ollama":
             return self._get_ollama_answer(question=question)
         elif self._client_name == "openrouter":
-            return self._get_openrouter_answer(question=question, model_name=self._model)
+            return self._get_openrouter_answer(
+                question=question, model_name=self._model
+            )
         elif self._client_name == "scads-llm":
             return self._get_scads_llm_answer(question=question, model_name=self._model)
         else:
@@ -245,57 +253,66 @@ class LLMExplainer:
             prompt=question,
         )
         return response["response"]
-    
+
     def _get_openrouter_answer(self, *, question: str, model_name: str) -> str:
         """Get answer from OpenRouter.
 
         Args:
             question: The input question.
             model_name: The name of the model to use.
-        
+
         Returns:
             Generated response text.
         """
-        
+
         response = requests.post(
-        url=self._openrouter_url,
-        headers={
-            "Authorization": f"Bearer {self._openrouter_api_key}",
-        },
-        data=json.dumps({
-            "model": model_name,
-            "messages": [
-            {
-                "role": "user",
-                "content": question,
-            }
-            ]
-        })
+            url=self._openrouter_url,
+            headers={
+                "Authorization": f"Bearer {self._openrouter_api_key}",
+            },
+            data=json.dumps(
+                {
+                    "model": model_name,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": question,
+                        }
+                    ],
+                }
+            ),
         )
         if response.status_code != 200:
             # Warn
-            warnings.warn(f"OpenRouter API request failed with status code {response.status_code}: {response.text}")
+            warnings.warn(
+                f"OpenRouter API request failed with status code {response.status_code}: {response.text}"
+            )
             # Return empty response
             return ""
         if "choices" not in response.json() or len(response.json()["choices"]) == 0:
-            warnings.warn(f"OpenRouter API response missing 'choices': {response.json()}")
+            warnings.warn(
+                f"OpenRouter API response missing 'choices': {response.json()}"
+            )
             return ""
         return response.json()["choices"][0]["message"]["content"]
-    
+
     def _get_scads_llm_answer(self, *, question: str, model_name: str) -> str:
         """Get answer from SCADS-LLM.
 
         Args:
             question: The input question.
-            model_name: The name of the model to use.   
-        
+            model_name: The name of the model to use.
+
         Returns:
             Generated response text.
         """
-        
-        client = OpenAI(base_url="https://llm.scads.ai/v1",api_key=self._scads_llm_api_key)
-        
-        response = client.chat.completions.create(messages=[{"role":"user","content":question}],model=model_name)
-        
+
+        client = OpenAI(
+            base_url="https://llm.scads.ai/v1", api_key=self._scads_llm_api_key
+        )
+
+        response = client.chat.completions.create(
+            messages=[{"role": "user", "content": question}], model=model_name
+        )
+
         return response.choices[0].message.content
-        

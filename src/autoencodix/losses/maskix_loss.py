@@ -80,7 +80,7 @@ class MaskixLoss(BaseLoss):
             mask_loss * self.config.delta_mask_predictor
             + (1 - self.config.delta_mask_predictor) * recon_loss_weighted
         )
-        
+
         recon_loss: torch.Tensor = mse_loss(
             model_output.reconstruction, targets, reduction=self.config.loss_reduction
         )
@@ -88,6 +88,7 @@ class MaskixLoss(BaseLoss):
         # predicted_mask: torch.tensor
         return total_loss, {
             "recon_loss": recon_loss,
-            "recon_loss_weighted": (1 - self.config.delta_mask_predictor) * recon_loss_weighted,
+            "recon_loss_weighted": (1 - self.config.delta_mask_predictor)
+            * recon_loss_weighted,
             "mask_loss": mask_loss * self.config.delta_mask_predictor,
         }
