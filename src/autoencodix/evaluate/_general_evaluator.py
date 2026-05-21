@@ -362,7 +362,8 @@ class GeneralEvaluator(BaseEvaluator):
         # check if classification
         if ml_type == "classification":
             # Remove empty classes from y
-            y = y.cat.remove_unused_categories()
+            if y.dtype.name == "category":
+                y = y.cat.remove_unused_categories()
 
         ## Cross Validation
         if len(y.unique()) > 1:  # ty: ignore
