@@ -42,6 +42,7 @@ class GeneralEvaluator(BaseEvaluator):
         metric_class: str = "roc_auc_ovo",  # Default is 'roc_auc_ovo' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
         metric_regression: str = "r2",  # Default is 'r2'
         reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
+        reference_reducer: dict = {},  # Option to provide pre-fitted reducer objects for PCA, UMAP or TSNE, e.g. {"PCA": pca_reducer, "UMAP": umap_reducer, "TSNE": tsne_reducer}
         split_type: str = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
         n_downsample: Union[
             int, None
@@ -64,7 +65,8 @@ class GeneralEvaluator(BaseEvaluator):
             params:List of clinical annotation columns to evaluate, or "all" to use all columns (default: "all").
             metric_class: Scoring metric for classification tasks (default: "roc_auc_ovo").
             metric_regression: Scoring metric for regression tasks (default: "r2").
-            reference_methods:List of feature representations to evaluate (e.g., "PCA", "UMAP", "TSNE", "RandomFeature"). "Latent" is always included (default: []).
+            reference_methods: List of feature representations to evaluate (e.g., "PCA", "UMAP", "TSNE", "RandomFeature"). "Latent" is always included (default: []).
+            reference_reducer: Optional dictionary of pre-fitted dimensionality reduction objects for PCA, UMAP, or TSNE to ensure consistent transformations across runs (default: {}).
             split_type: which split to use
                 use-split" for pre-defined splits, "CV-N" for N-fold cross-validation, or "LOOCV" for leave-one-out cross-validation (default: "use-split").
             n_downsample: If provided, downsample the data to this number of samples for faster evaluation. Default is 10000. Set to None to disable downsampling.
@@ -191,7 +193,7 @@ class GeneralEvaluator(BaseEvaluator):
 
                 #     df = self._load_input_for_ml_xmodal(task_xmodal, datasets, result, modality=modality)
                 # else:
-                df = self._load_input_for_ml(task, datasets, result, n_downsample)
+                df = self._load_input_for_ml(task, datasets, result, n_downsample, reference_reducer=reference_reducer)
 
                 if params == "all":
                     params = clin_data.columns.tolist()
@@ -568,7 +570,7 @@ class GeneralEvaluator(BaseEvaluator):
 
     @staticmethod
     def _load_input_for_ml(
-        task: str, dataset: DatasetContainer, result: Result, n_downsample: Union[int, None] = None
+        task: str, dataset: DatasetContainer, result: Result, n_downsample: Union[int, None] = None, reference_reducer: dict = {}
     ) -> pd.DataFrame:
         """Loads and processes input data for various machine learning tasks based on the specified task type.
 
@@ -585,6 +587,7 @@ class GeneralEvaluator(BaseEvaluator):
             dataset: The dataset container object holding train, validation, and test splits.
             result: The result object containing model configuration and methods to retrieve latent representations.
             n_downsample: If provided, downsample the data to this number of samples for faster processing. Default is None (no downsampling).
+            reference_reducer: Optional dictionary of pre-fitted dimensionality reduction objects for PCA, UMAP, or TSNE to ensure consistent transformations across runs (default: {}).
         Returns:
             A DataFrame containing the processed input data suitable for the specified ML task.
         Raises:
@@ -650,19 +653,43 @@ class GeneralEvaluator(BaseEvaluator):
             #         ]
             #     )
             if task == "UMAP":
-                reducer = UMAP(n_components=result.model.config.latent_dim)
+                if task in reference_reducer:
+                    reducer = reference_reducer[task]
+                    if reducer.n_components != result.model.config.latent_dim:
+                        raise ValueError(
+                            f"The provided UMAP reducer has n_components={reducer.n_components}, which does not match the latent dimension {result.model.config.latent_dim} specified in the model config."
+                        )
+                else:
+                    reducer = UMAP(n_components=result.model.config.latent_dim)
+                    reducer.fit(df_processed)
+                    
                 df = pd.DataFrame(
-                    reducer.fit_transform(df_processed), index=df_processed.index
+                    reducer.transform(df_processed), index=df_processed.index
                 )
             elif task == "PCA":
-                reducer = PCA(n_components=result.model.config.latent_dim)
+                if task in reference_reducer:
+                    reducer = reference_reducer[task]
+                    if reducer.n_components_ != result.model.config.latent_dim:
+                        raise ValueError(
+                            f"The provided PCA reducer has n_components={reducer.n_components_}, which does not match the latent dimension {result.model.config.latent_dim} specified in the model config."
+                        )
+                    print("Using pre-fitted PCA reducer for dimensionality reduction.")
+                else:
+                    reducer = PCA(n_components=result.model.config.latent_dim)
+                    reducer.fit(df_processed)
+                    
                 df = pd.DataFrame(
-                    reducer.fit_transform(df_processed), index=df_processed.index
+                    reducer.transform(df_processed), index=df_processed.index
                 )
             elif task == "TSNE":
-                reducer = TSNE(n_components=result.model.config.latent_dim)
+                if task in reference_reducer:
+                    reducer = reference_reducer[task]
+                else:
+                    reducer = TSNE(n_components=result.model.config.latent_dim)
+                    reducer.fit(df_processed)
+                    
                 df = pd.DataFrame(
-                    reducer.fit_transform(df_processed), index=df_processed.index
+                    reducer.transform(df_processed), index=df_processed.index
                 )
             elif task == "RandomFeature":
                 df = df_processed.sample(n=result.model.config.latent_dim, axis=1)
