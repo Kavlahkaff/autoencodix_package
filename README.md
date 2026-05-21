@@ -58,7 +58,7 @@ Whether you have a feature request, found a bug, or have any other idea, we're a
 ## Read The Docs
 You can find our documentation [here](https://jan-forest.github.io/autoencodix_package/).
 
-## 9 FAQ
+## FAQ
 
 ### Reproducibility and CUBLAS_WORKSPACE_CONFIG
 If you run for reproducibility with `FIX_RANDOMNESS: "all"` and you receive the following error:
