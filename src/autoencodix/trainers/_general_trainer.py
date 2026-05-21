@@ -346,7 +346,7 @@ class GeneralTrainer(BaseTrainer):
             if isinstance(indices, torch.Tensor)
             else np.array(indices)
         )
-
+        sample_ids = sample_ids.cpu().numpy()
         self._sample_ids_buffer[split][indices_np] = np.array(sample_ids)
         if self._config.save_memory and split != "test":
             return
