@@ -45,6 +45,7 @@ dependencies = [
     "tensorboard-plugin-profile==2.20.1",
     "tensorboard>=2.20.0",
     "python-dotenv>=1.2.1",
+    "huggingface_hub>=0.24.0",
 ]
 
 [dependency-groups]
