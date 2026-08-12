@@ -698,10 +698,12 @@ class GeneralVisualizer(BaseVisualizer):
             if len(np.unique(labels)) > 3 and not is_int_valued:
                 # Coerce non-numeric entries to NaN, keep numeric values
                 labels = [
-                    x
-                    if isinstance(x, (int, float, np.integer, np.floating))
-                    and not isinstance(x, bool)
-                    else float("nan")
+                    (
+                        x
+                        if isinstance(x, (int, float, np.integer, np.floating))
+                        and not isinstance(x, bool)
+                        else float("nan")
+                    )
                     for x in labels
                 ]
                 labels = list(
