@@ -691,9 +691,19 @@ class GeneralVisualizer(BaseVisualizer):
 
         # print(labels[0])
         if not isinstance(labels[0], str):
-            if len(np.unique(labels)) > 3:
-                # Change all non-float labels to NaN
-                labels = [x if isinstance(x, float) else float("nan") for x in labels]
+            is_int_valued = all(
+                isinstance(x, (int, np.integer)) and not isinstance(x, bool)
+                for x in labels
+            )
+            if len(np.unique(labels)) > 3 and not is_int_valued:
+                # Coerce non-numeric entries to NaN, keep numeric values
+                labels = [
+                    x
+                    if isinstance(x, (int, float, np.integer, np.floating))
+                    and not isinstance(x, bool)
+                    else float("nan")
+                    for x in labels
+                ]
                 labels = list(
                     pd.qcut(
                         x=pd.Series(labels),
