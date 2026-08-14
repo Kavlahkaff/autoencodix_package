@@ -473,18 +473,23 @@ class GeneralVisualizer(BaseVisualizer):
                     print(
                         "The provided label column is numeric and converted to categories."
                     )
-                    labels = [
-                        float("nan") if not isinstance(x, float) else x for x in labels
-                    ]
-                    labels = (
-                        pd.qcut(
-                            x=pd.Series(labels),
-                            q=4,
+                    # Try to convert all labels to float, if fails, convert to nan
+                    for i in range(len(labels)):
+                        try:
+                            labels[i] = float(labels[i])
+                        except ValueError:
+                            labels[i] = float("nan")
+                    # Check if all labels are NaN, convert to string
+                    if all(np.isnan(labels)):
+                        labels = [str(x) for x in labels]
+                    else:
+                        labels = list(
+                            pd.qcut(
+                                x=pd.Series(labels),
+                                q=4,
                             labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
+                        ).astype(str)
                         )
-                        .astype(str)
-                        .to_list()
-                    )
                 else:
                     center = False  ## Disable centering for numeric params
                     numeric = True
@@ -691,28 +696,24 @@ class GeneralVisualizer(BaseVisualizer):
 
         # print(labels[0])
         if not isinstance(labels[0], str):
-            is_int_valued = all(
-                isinstance(x, (int, np.integer)) and not isinstance(x, bool)
-                for x in labels
-            )
-            if len(np.unique(labels)) > 3 and not is_int_valued:
-                # Coerce non-numeric entries to NaN, keep numeric values
-                labels = [
-                    (
-                        x
-                        if isinstance(x, (int, float, np.integer, np.floating))
-                        and not isinstance(x, bool)
-                        else float("nan")
-                    )
-                    for x in labels
-                ]
-                labels = list(
-                    pd.qcut(
-                        x=pd.Series(labels),
-                        q=4,
+            if len(np.unique(labels)) > 3:
+                # Try to convert all labels to float, if fails, convert to nan
+                for i in range(len(labels)):
+                    try:
+                        labels[i] = float(labels[i])
+                    except ValueError:
+                        labels[i] = float("nan")
+                # Check if all labels are NaN, convert to string
+                if all(np.isnan(labels)):
+                    labels = [str(x) for x in labels]
+                else:
+                    labels = list(
+                        pd.qcut(
+                            x=pd.Series(labels),
+                            q=4,
                         labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
                     ).astype(str)
-                )
+                    )
             else:
                 labels = [str(x) for x in labels]
 
