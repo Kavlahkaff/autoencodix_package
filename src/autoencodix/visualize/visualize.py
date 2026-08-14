@@ -718,8 +718,8 @@ class Visualizer(BaseVisualizer):
                             pd.qcut(
                                 x=pd.Series(labels),
                                 q=4,
-                            labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
-                        ).astype(str)
+                                labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
+                            ).astype(str)
                         )
                 else:
                     center = False  ## Disable centering for numeric params
@@ -852,8 +852,8 @@ class Visualizer(BaseVisualizer):
                         pd.qcut(
                             x=pd.Series(labels),
                             q=4,
-                        labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
-                    ).astype(str)
+                            labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
+                        ).astype(str)
                     )
             else:
                 labels = [str(x) for x in labels]
