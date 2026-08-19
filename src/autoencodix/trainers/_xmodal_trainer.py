@@ -393,7 +393,7 @@ class XModalTrainer(BaseTrainer):
             0  # because of unpaired training we need to sum the samples instead of using len(dataset)
         )
         
-        self._grad_clip_warning_sent = False # Reset the warning flag at the start of each epoch
+        # self._grad_clip_warning_sent = False # Reset the warning flag at the start of each epoch
 
         for batch in self._trainloader:
             with self._fabric.autocast():
@@ -441,7 +441,7 @@ class XModalTrainer(BaseTrainer):
                     # Give warning about gradient clipping if it is applied (warn only once)
                     if not self._grad_clip_warning_sent and total_norm > self._config.grad_clip_max_norm:
                         warnings.warn(
-                                f"Gradient clipping was applied in epoch {self._cur_epoch}. Total norm of gradients (adjusted for number of features): {total_norm:.4f} exceeded max norm of {self._config.grad_clip_max_norm}."
+                                f"Gradient clipping was first applied in epoch {self._cur_epoch}. Total norm of gradients (adjusted for number of features): {total_norm:.4f} exceeded max norm of {self._config.grad_clip_max_norm}."
                             )
                     self._grad_clip_warning_sent = True 
                 # Perform optimizer step for each modality
@@ -979,7 +979,7 @@ class XModalTrainer(BaseTrainer):
                                 # Give warning about gradient clipping if it is applied (warn only once)
                                 if not self._grad_clip_warning_sent and total_norm > self._config.grad_clip_max_norm:
                                     warnings.warn(
-                                            f"Gradient clipping was applied in epoch {self._cur_epoch}. Total norm of gradients (adjusted for number of features): {total_norm:.4f} exceeded max norm of {self._config.grad_clip_max_norm}."
+                                            f"Gradient clipping was first applied in epoch {self._cur_epoch}. Total norm of gradients (adjusted for number of features): {total_norm:.4f} exceeded max norm of {self._config.grad_clip_max_norm}."
                                         )
                                 self._grad_clip_warning_sent = True 
                             dynamics["optim"].step()
